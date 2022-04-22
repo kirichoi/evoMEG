@@ -279,7 +279,7 @@ def mutate_and_evaluate(listantStr, listdist, listrl):
                             bounds=p_bound, maxiter=optiMaxIter, tol=optiTol,
                             polish=optiPolish, seed=r_seed)
                 
-                if not res.success:
+                if not res.success or res.fun == 10000:
                     eval_dist[m] = listdist[m]
                     eval_model[m] = listantStr[m]
                     eval_rl[m] = listrl[m]
@@ -361,9 +361,8 @@ def initialize():
             res = scipy.optimize.differential_evolution(f1, args=(r,), 
                                bounds=p_bound, maxiter=optiMaxIter, tol=optiTol,
                                polish=optiPolish, seed=r_seed)
-            if not res.success:
+            if not res.success or res.fun == 10000:
                 numBadModels += 1
-                
             else:
                 # TODO: Might be able to cut the bottom part by simply using 
                 # the obj func value from optimizer
@@ -450,7 +449,7 @@ def random_gen(listAntStr, listDist, listrl):
                             polish=optiPolish, seed=r_seed)
                 
                 # Failed to find solution
-                if not res.success:
+                if not res.success or res.fun == 10000:
                     rnd_dist[l] = listDist[l]
                     rnd_model[l] = listAntStr[l]
                     rnd_rl[l] = listrl[l]
