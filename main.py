@@ -301,19 +301,8 @@ def mutate_and_evaluate(listantStr, listdist, listrl):
                             eval_model[m] = listantStr[m]
                             eval_rl[m] = listrl[m]
                         else:
-                            concCC_i[np.abs(concCC_i) < 1e-12] = 0 # Set small values to zero
-                            
-                            concCC_i_row = r.getFloatingSpeciesIds()
-                            concCC_i_col = r.getReactionIds()
-                            concCC_i = concCC_i[np.argsort(concCC_i_row)]
-                            concCC_i = concCC_i[:,np.argsort(concCC_i_col)]
-                            
-                            dist_i = ((np.linalg.norm(realConcCC - concCC_i))*(1 + 
-                                        np.sum(np.not_equal(np.sign(np.array(realConcCC)), 
-                                                            np.sign(np.array(concCC_i))))))
-                            
-                            if dist_i < listdist[m]:
-                                eval_dist[m] = dist_i
+                            if res.fun < listdist[m]:
+                                eval_dist[m] = res.fun
                                 r.reset()
                                 eval_model[m] = r.getAntimony(current=True)
                                 eval_rl[m] = reactionList
@@ -388,17 +377,7 @@ def initialize():
                     if np.isnan(concCC_i).any():
                         numBadModels += 1
                     else:
-                        concCC_i[np.abs(concCC_i) < 1e-12] = 0 # Set small values to zero
-                        
-                        concCC_i_row = r.getFloatingSpeciesIds()
-                        concCC_i_col = r.getReactionIds()
-                        concCC_i = concCC_i[np.argsort(concCC_i_row)]
-                        concCC_i = concCC_i[:,np.argsort(concCC_i_col)]
-                        
-                        dist_i = ((np.linalg.norm(realConcCC - concCC_i))*(1 + 
-                                        np.sum(np.not_equal(np.sign(np.array(realConcCC)), 
-                                                            np.sign(np.array(concCC_i))))))
-                        ens_dist[numGoodModels] = dist_i
+                        ens_dist[numGoodModels] = res.fun
                         r.reset()
                         ens_model[numGoodModels] = r.getAntimony(current=True)
                         ens_rl[numGoodModels] = rl
@@ -489,19 +468,8 @@ def random_gen(listAntStr, listDist, listrl):
                             rnd_model[l] = listAntStr[l]
                             rnd_rl[l] = listrl[l]
                         else:
-                            concCC_i[np.abs(concCC_i) < 1e-12] = 0 # Set small values to zero
-                            
-                            concCC_i_row = r.getFloatingSpeciesIds()
-                            concCC_i_col = r.getReactionIds()
-                            concCC_i = concCC_i[np.argsort(concCC_i_row)]
-                            concCC_i = concCC_i[:,np.argsort(concCC_i_col)]
-                            
-                            dist_i = ((np.linalg.norm(realConcCC - concCC_i))*(1 + 
-                                        np.sum(np.not_equal(np.sign(np.array(realConcCC)), 
-                                                            np.sign(np.array(concCC_i))))))
-                            
-                            if dist_i < listDist[l]:
-                                rnd_dist[l] = dist_i
+                            if res.fun < listDist[l]:
+                                rnd_dist[l] = res.fun
                                 r.reset()
                                 rnd_model[l] = r.getAntimony(current=True)
                                 rnd_rl[l] = rl
@@ -539,7 +507,7 @@ if __name__ == '__main__':
     # General settings ========================================================
     
     # Number of generations
-    n_gen = 100
+    n_gen = 20
     # Size of output ensemble
     ens_size = 100
     # Number of models passed on the next generation without mutation
@@ -547,9 +515,9 @@ if __name__ == '__main__':
     # Number of models to mutate
     mut_size = int(ens_size/2)
     # Maximum iteration allowed for random generation
-    maxIter_gen = 100
+    maxIter_gen = 10
     # Maximum iteration allowed for mutation
-    maxIter_mut = 100
+    maxIter_mut = 10
     # Set conserved moiety
     conservedMoiety = False
     
@@ -595,7 +563,7 @@ if __name__ == '__main__':
     # Flag for saving current settings
     EXPORT_SETTINGS = False
     # Path to save the output
-    EXPORT_PATH = './outputs/FFL_m_1'
+    EXPORT_PATH = './outputs/FFL_m_2'
     
     # Flag to run algorithm
     RUN = True
