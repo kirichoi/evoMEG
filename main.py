@@ -348,6 +348,7 @@ def initialize():
             st = ng.getFullStoichiometryMatrix(rl, ns).tolist()
             stt = ng.removeBoundaryNodes(np.array(st))
             stt[0][stt[0]>1] = 1
+            stt[0][stt[0]<-1] = -1
         antStr = ng.generateAntimony(realFloatingIdsSort, realBoundaryIdsSort, stt[1],
                                       stt[2], rl, boundary_init=realBoundaryVal)
         try:
@@ -426,6 +427,7 @@ def random_gen(listAntStr, listDist, listrl):
             st = ng.getFullStoichiometryMatrix(rl, ns).tolist()
             stt = ng.removeBoundaryNodes(np.array(st))
             stt[0][stt[0]>1] = 1
+            stt[0][stt[0]<-1] = -1
             
             d += 1
             
