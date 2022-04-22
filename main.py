@@ -257,6 +257,7 @@ def mutate_and_evaluate(listantStr, listdist, listrl):
             st = ng.getFullStoichiometryMatrix(reactionList, ns).tolist()
             stt = ng.removeBoundaryNodes(np.array(st))
             stt[0][stt[0]>1] = 1
+            stt[0][stt[0]<-1] = -1
             o += 1
         
         if o >= maxIter_mut:
@@ -339,6 +340,7 @@ def initialize():
         st = ng.getFullStoichiometryMatrix(rl, ns).tolist()
         stt = ng.removeBoundaryNodes(np.array(st))
         stt[0][stt[0]>1] = 1
+        stt[0][stt[0]<-1] = -1
         # Ensure no redundant model
         while (stt[1] != realFloatingIdsIndSort or stt[2] != realBoundaryIdsIndSort 
                or rl in rl_track or np.sum(stt[0]) != 0):
@@ -416,6 +418,7 @@ def random_gen(listAntStr, listDist, listrl):
         st = ng.getFullStoichiometryMatrix(rl, ns).tolist()
         stt = ng.removeBoundaryNodes(np.array(st))
         stt[0][stt[0]>1] = 1
+        stt[0][stt[0]<-1] = -1
         # Ensure no redundant models
         while ((stt[1] != realFloatingIdsIndSort or stt[2] != realBoundaryIdsIndSort or
                 rl in rl_track or np.sum(stt[0]) != 0) and (d < maxIter_gen)):
@@ -515,9 +518,9 @@ if __name__ == '__main__':
     # Number of models to mutate
     mut_size = int(ens_size/2)
     # Maximum iteration allowed for random generation
-    maxIter_gen = 10
+    maxIter_gen = 500
     # Maximum iteration allowed for mutation
-    maxIter_mut = 10
+    maxIter_mut = 500
     # Set conserved moiety
     conservedMoiety = False
     
