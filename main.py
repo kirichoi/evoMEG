@@ -270,6 +270,7 @@ def mutate_and_evaluate(listantStr, listdist, listrl):
                                           boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
+                r.steadyState()
                 
                 counts = 0
                 countf = 0
@@ -284,34 +285,17 @@ def mutate_and_evaluate(listantStr, listdist, listrl):
                     eval_model[m] = listantStr[m]
                     eval_rl[m] = listrl[m]
                 else:
-                    r.resetToOrigin()
-                    r.setValues(r.getGlobalParameterIds(), res.x)
-
-                    r.simulate(0, 10000, 5)
-                    SS_i = r.getFloatingSpeciesConcentrations()
-                    
-                    if np.any(SS_i < 1e-5) or np.any(SS_i > 1e5):
+                    if res.fun < listdist[m]:
+                        r.resetToOrigin()
+                        r.setValues(r.getGlobalParameterIds(), res.x)
+                        eval_dist[m] = res.fun
+                        eval_model[m] = r.getAntimony(current=True)
+                        eval_rl[m] = reactionList
+                        rl_track.append(reactionList)
+                    else:
                         eval_dist[m] = listdist[m]
                         eval_model[m] = listantStr[m]
                         eval_rl[m] = listrl[m]
-                    else:
-                        concCC_i = customGetScaledConcentrationControlCoefficientMatrix(r)
-                        
-                        if np.isnan(concCC_i).any():
-                            eval_dist[m] = listdist[m]
-                            eval_model[m] = listantStr[m]
-                            eval_rl[m] = listrl[m]
-                        else:
-                            if res.fun < listdist[m]:
-                                eval_dist[m] = res.fun
-                                r.reset()
-                                eval_model[m] = r.getAntimony(current=True)
-                                eval_rl[m] = reactionList
-                                rl_track.append(reactionList)
-                            else:
-                                eval_dist[m] = listdist[m]
-                                eval_model[m] = listantStr[m]
-                                eval_rl[m] = listrl[m]
             except:
                 eval_dist[m] = listdist[m]
                 eval_model[m] = listantStr[m]
@@ -353,6 +337,7 @@ def initialize():
                                       stt[2], rl, boundary_init=realBoundaryVal)
         try:
             r = te.loada(antStr)
+            r.steadyState()
 
             counts = 0
             countf = 0
@@ -364,28 +349,14 @@ def initialize():
             if not res.success or res.fun == 10000:
                 numBadModels += 1
             else:
-                # TODO: Might be able to cut the bottom part by simply using 
-                # the obj func value from optimizer
                 r.resetToOrigin()
                 r.setValues(r.getGlobalParameterIds(), res.x)
+                ens_dist[numGoodModels] = res.fun
+                ens_model[numGoodModels] = r.getAntimony(current=True)
+                ens_rl[numGoodModels] = rl
+                rl_track.append(rl)
                 
-                r.simulate(0, 10000, 5)
-                SS_i = r.getFloatingSpeciesConcentrations()
-                if np.any(SS_i < 1e-5) or np.any(SS_i > 1e5):
-                    numBadModels += 1
-                else:
-                    concCC_i = customGetScaledConcentrationControlCoefficientMatrix(r)
-                    
-                    if np.isnan(concCC_i).any():
-                        numBadModels += 1
-                    else:
-                        ens_dist[numGoodModels] = res.fun
-                        r.reset()
-                        ens_model[numGoodModels] = r.getAntimony(current=True)
-                        ens_rl[numGoodModels] = rl
-                        rl_track.append(rl)
-                        
-                        numGoodModels = numGoodModels + 1
+                numGoodModels = numGoodModels + 1
         except:
             numBadModels = numBadModels + 1
         antimony.clearPreviousLoads()
@@ -439,6 +410,7 @@ def random_gen(listAntStr, listDist, listrl):
                             stt[1], stt[2], rl, boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
+                r.steadyState()
                 
                 counts = 0
                 countf = 0
@@ -454,34 +426,17 @@ def random_gen(listAntStr, listDist, listrl):
                     rnd_model[l] = listAntStr[l]
                     rnd_rl[l] = listrl[l]
                 else:
-                    r.resetToOrigin()
-                    r.setValues(r.getGlobalParameterIds(), res.x)
-
-                    r.simulate(0, 10000, 5)
-                    SS_i = r.getFloatingSpeciesConcentrations()
-                    
-                    if np.any(SS_i < 1e-5) or np.any(SS_i > 1e5):
+                    if res.fun < listDist[l]:
+                        r.resetToOrigin()
+                        r.setValues(r.getGlobalParameterIds(), res.x)
+                        rnd_dist[l] = res.fun
+                        rnd_model[l] = r.getAntimony(current=True)
+                        rnd_rl[l] = rl
+                        rl_track.append(rl)
+                    else:
                         rnd_dist[l] = listDist[l]
                         rnd_model[l] = listAntStr[l]
                         rnd_rl[l] = listrl[l]
-                    else:
-                        concCC_i = customGetScaledConcentrationControlCoefficientMatrix(r)
-                        
-                        if np.isnan(concCC_i).any():
-                            rnd_dist[l] = listDist[l]
-                            rnd_model[l] = listAntStr[l]
-                            rnd_rl[l] = listrl[l]
-                        else:
-                            if res.fun < listDist[l]:
-                                rnd_dist[l] = res.fun
-                                r.reset()
-                                rnd_model[l] = r.getAntimony(current=True)
-                                rnd_rl[l] = rl
-                                rl_track.append(rl)
-                            else:
-                                rnd_dist[l] = listDist[l]
-                                rnd_model[l] = listAntStr[l]
-                                rnd_rl[l] = listrl[l]
             except:
                 rnd_dist[l] = listDist[l]
                 rnd_model[l] = listAntStr[l]
@@ -511,7 +466,7 @@ if __name__ == '__main__':
     # General settings ========================================================
     
     # Number of generations
-    n_gen = 20
+    n_gen = 30
     # Size of output ensemble
     ens_size = 100
     # Number of models passed on the next generation without mutation
@@ -567,7 +522,7 @@ if __name__ == '__main__':
     # Flag for saving current settings
     EXPORT_SETTINGS = False
     # Path to save the output
-    EXPORT_PATH = './outputs/FFL_m_2'
+    EXPORT_PATH = './outputs/FFL_m_4'
     
     # Flag to run algorithm
     RUN = True
