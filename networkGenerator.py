@@ -29,14 +29,14 @@ class RP:
     BiBI  = 0.05
     
 class RLP:
-    Default = 0.7
-    Inhib = 0.125
-    Activ = 0.125
-    Inhibactiv = 0.05
+    Default = 1.
+    Inhib = 0#0.125
+    Activ = 0#0.125
+    Inhibactiv = 0#0.05
     
 class REVP:
-    Irreversible = 1.
-    Reversible = 0.
+    Irreversible = 0.7
+    Reversible = 0.3
 
 #def pickRateLawType():
 #    rt = np.random.random()

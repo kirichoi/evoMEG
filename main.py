@@ -474,9 +474,9 @@ if __name__ == '__main__':
     # Number of models to mutate
     mut_size = int(ens_size/2)
     # Maximum iteration allowed for random generation
-    maxIter_gen = 500
+    maxIter_gen = 100
     # Maximum iteration allowed for mutation
-    maxIter_mut = 500
+    maxIter_mut = 100
     # Set conserved moiety
     conservedMoiety = False
     
@@ -520,7 +520,7 @@ if __name__ == '__main__':
     # Flag for saving collected models
     EXPORT_OUTPUT = True
     # Flag for saving current settings
-    EXPORT_SETTINGS = False
+    EXPORT_SETTINGS = True
     # Path to save the output
     EXPORT_PATH = './outputs/FFL_m_4'
     
@@ -789,6 +789,7 @@ if __name__ == '__main__':
     #%%
         if EXPORT_SETTINGS or EXPORT_OUTPUT:
             settings = {}
+            settings['modelType'] = modelType
             settings['n_gen'] = n_gen
             settings['ens_size'] = ens_size
             settings['pass_size'] = pass_size

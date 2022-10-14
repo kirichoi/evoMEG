@@ -9,13 +9,34 @@ import sys, os
 import numpy as np
 import pandas as pd
 
-def exportSettings(settingsDict):
+def exportSettings(settings, path=None):
     """
+    Export all settings to a specified path
     """
+    
+    if path:
+        outputdir = path
+    else:
+        outputdir = os.path.join(os.getcwd(), 'output')
+    
+    outputtxt = open(os.path.join(outputdir, 'settings.txt'), 'w')
+    outputtxt.writelines('modelType, '+str(settings['modelType']) + '\n')
+    outputtxt.writelines('n_gen, '+str(settings['n_gen']) + '\n')
+    outputtxt.writelines('ens_size, '+str(settings['ens_size']) + '\n')
+    outputtxt.writelines('pass_size, '+str(settings['pass_size']) + '\n')
+    outputtxt.writelines('mut_size, '+str(settings['mut_size']) + '\n')
+    outputtxt.writelines('maxIter_gen, '+str(settings['maxIter_gen']) + '\n')
+    outputtxt.writelines('maxIter_mut, '+str(settings['maxIter_mut']) + '\n')
+    outputtxt.writelines('optiMaxIter, '+str(settings['optiMaxIter']) + '\n')
+    outputtxt.writelines('optiTol, '+str(settings['optiTol']) + '\n')
+    outputtxt.writelines('optiPolish, '+str(settings['optiPolish']) + '\n')
+    outputtxt.writelines('r_seed, '+str(settings['r_seed']) + '\n')
+    outputtxt.close()
+    
     
 def exportOutputs(models, dists, dist_list, settings, time, rl_track, path=None):
     """
-    Export all outputs to specified path
+    Export all outputs to a specified path
     
     """
     
