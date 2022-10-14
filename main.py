@@ -81,9 +81,9 @@ def f1(k_list, *args):
         objCCC = np.multiply(T4, np.divide(a, b))
         
         if np.isnan(objCCC).any():
-            dist_obj = 10000
+            dist_obj = 100000
         else:
-            objCCC[np.abs(objCCC) < 1e-12] = 0 # Set small values to zero
+            objCCC[np.abs(objCCC) < 1e-8] = 0 # Set small values to zero
             
             objCCC_row = args[0].getFloatingSpeciesIds()
             objCCC_col = args[0].getReactionIds()
@@ -93,7 +93,7 @@ def f1(k_list, *args):
             dist_obj = ((np.linalg.norm(realConcCC - objCCC))*(1 + np.sum(np.not_equal(np.sign(np.array(realConcCC)), np.sign(np.array(objCCC))))))
     except:
         countf += 1
-        dist_obj = 10000
+        dist_obj = 100000
         
     counts += 1
     
@@ -106,8 +106,7 @@ def callbackF(X, convergence=0.):
     print(str(counts) + ", " + str(countf))
     return False
 
-
-def mutate_and_evaluate(listantStr, listdist, listrl):
+def mutate_and_evaluate(ens_model, ens_dist, ens_rl, minind, mutind):
     global countf
     global counts
     
@@ -115,16 +114,36 @@ def mutate_and_evaluate(listantStr, listdist, listrl):
     eval_model = np.empty(mut_size, dtype='object')
     eval_rl = np.empty(mut_size, dtype='object')
     
+    mut_model = ens_model[mutind]
+    mut_dist = ens_dist[mutind]
+    mut_rl = ens_rl[mutind]
+    
     for m in mut_range:
-        r = te.loada(listantStr[m])
-        r.simulate(0, 10000, 5)
+        r1 = te.loada(mut_model[m])
+        r1.simulate(0, 10000, 5)
         
-        concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
+        concCC1 = customGetScaledConcentrationControlCoefficientMatrix(r1)
         
-        cFalse = (1 + np.sum(np.not_equal(np.sign(np.array(realConcCC)), 
-                                          np.sign(np.array(concCC))), axis=0))
+        concCC1[np.abs(concCC1) < 1e-8] = 0 # Set small values to zero
+        
+        cFalse1 = (1 + np.sum(np.not_equal(np.sign(np.array(realConcCC)), 
+                                          np.sign(np.array(concCC1))), axis=0))
 
-        tempdiff = cFalse*np.linalg.norm(realConcCC - concCC, axis=0)
+        tempdiff1 = cFalse1*np.linalg.norm(realConcCC - concCC1, axis=0)
+        
+        minrndidx = np.random.choice(minind)
+        
+        r2 = te.loada(ens_model[minrndidx])
+        r2.simulate(0, 10000, 5)
+        
+        concCC2 = customGetScaledConcentrationControlCoefficientMatrix(r2)
+        
+        concCC2[np.abs(concCC2) < 1e-8] = 0 # Set small values to zero
+        
+        cFalse2 = (1 + np.sum(np.not_equal(np.sign(np.array(realConcCC)), 
+                                          np.sign(np.array(concCC2))), axis=0))
+
+        tempdiff2 = cFalse2*np.linalg.norm(realConcCC - concCC2, axis=0)
         
         stt = [[1],[],[]]
         reactionList = rl_track[0]
@@ -133,126 +152,130 @@ def mutate_and_evaluate(listantStr, listdist, listrl):
         
         while ((stt[1] != realFloatingIdsIndSort or stt[2] != realBoundaryIdsIndSort or
                 reactionList in rl_track or np.sum(stt[0]) != 0) and (o < maxIter_mut)):
-            r_idx = np.random.choice(np.arange(nr), 
-                                     p=np.divide(tempdiff,np.sum(tempdiff)))
-            posRctInd = np.append(np.array(realFloatingIdsIndSort)[np.where(
-                        np.abs(realConcCC[:,r_idx]) > 1e-12)[0]], np.array(realBoundaryIdsIndSort)).astype(int)
+            r_idx = np.random.choice(np.arange(nr), p=np.divide(tempdiff1,np.sum(tempdiff1)))
             
-            reactionList = copy.deepcopy(listrl[m])
+            reactionList = copy.deepcopy(mut_rl[m])
             
-            rct = [col[3] for col in reactionList]
-            prd = [col[4] for col in reactionList]
-            
-            rType, regType, revType = ng.pickReactionType()
-            
-            # TODO: pick reactants and products based on control coefficients
-            if rType == ng.ReactionType.UNIUNI:
-                # UniUni
-                rct_id = np.random.choice(posRctInd, size=1).tolist()
-                prd_id = np.random.choice(np.delete(nsList, rct_id), size=1).tolist()
-                all_rct = [i for i,x in enumerate(rct) if x==rct_id]
-                all_prd = [i for i,x in enumerate(prd) if x==prd_id]
+            if np.random.random() < recomb:
+                reactionList[r_idx] = ens_rl[minrndidx][r_idx]
                 
-                while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
-                       (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or 
-                       (len(set(all_rct) & set(all_prd)) > 0)):
+            else:
+                posRctInd = np.append(np.array(realFloatingIdsIndSort)[np.nonzero(realConcCC[:,r_idx])[0]], 
+                                      np.array(realBoundaryIdsIndSort)).astype(int)
+                
+                rct = [col[3] for col in reactionList]
+                prd = [col[4] for col in reactionList]
+                
+                rType, regType, revType = ng.pickReactionType()
+                
+                # TODO: pick reactants and products based on control coefficients
+                if rType == ng.ReactionType.UNIUNI:
+                    # UniUni
                     rct_id = np.random.choice(posRctInd, size=1).tolist()
                     prd_id = np.random.choice(np.delete(nsList, rct_id), size=1).tolist()
-                    # Search for potentially identical reactions
                     all_rct = [i for i,x in enumerate(rct) if x==rct_id]
                     all_prd = [i for i,x in enumerate(prd) if x==prd_id]
-            elif rType == ng.ReactionType.BIUNI:
-                # BiUni
-                rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
-                prd_id = np.random.choice(np.delete(nsList, rct_id), size=1).tolist()
-                all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
-                all_prd = [i for i,x in enumerate(prd) if x==prd_id]
-                
-                while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
-                       (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or 
-                       (len(set(all_rct) & set(all_prd)) > 0)):
+                    
+                    while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
+                           (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or 
+                           (len(set(all_rct) & set(all_prd)) > 0)):
+                        rct_id = np.random.choice(posRctInd, size=1).tolist()
+                        prd_id = np.random.choice(np.delete(nsList, rct_id), size=1).tolist()
+                        # Search for potentially identical reactions
+                        all_rct = [i for i,x in enumerate(rct) if x==rct_id]
+                        all_prd = [i for i,x in enumerate(prd) if x==prd_id]
+                elif rType == ng.ReactionType.BIUNI:
+                    # BiUni
                     rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
                     prd_id = np.random.choice(np.delete(nsList, rct_id), size=1).tolist()
-                    # Search for potentially identical reactions
                     all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
                     all_prd = [i for i,x in enumerate(prd) if x==prd_id]
-            elif rType == ng.ReactionType.UNIBI:
-                # UniBi
-                rct_id = np.random.choice(posRctInd, size=1).tolist()
-                prd_id = np.random.choice(np.delete(nsList, rct_id), size=2, replace=True).tolist()
-                all_rct = [i for i,x in enumerate(rct) if x==rct_id]
-                all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
-                
-                while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
-                       (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or 
-                       (len(set(all_rct) & set(all_prd)) > 0)):
+                    
+                    while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
+                           (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or 
+                           (len(set(all_rct) & set(all_prd)) > 0)):
+                        rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
+                        prd_id = np.random.choice(np.delete(nsList, rct_id), size=1).tolist()
+                        # Search for potentially identical reactions
+                        all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
+                        all_prd = [i for i,x in enumerate(prd) if x==prd_id]
+                elif rType == ng.ReactionType.UNIBI:
+                    # UniBi
                     rct_id = np.random.choice(posRctInd, size=1).tolist()
                     prd_id = np.random.choice(np.delete(nsList, rct_id), size=2, replace=True).tolist()
-                    # Search for potentially identical reactions
                     all_rct = [i for i,x in enumerate(rct) if x==rct_id]
                     all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
-            else:
-                # BiBi
-                rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
-                prd_id = np.random.choice(np.delete(nsList, rct_id), size=2, replace=True).tolist()
-                all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
-                all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
-                
-                while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
-                       (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or
-                       (len(set(all_rct) & set(all_prd)) > 0)):
+                    
+                    while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
+                           (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or 
+                           (len(set(all_rct) & set(all_prd)) > 0)):
+                        rct_id = np.random.choice(posRctInd, size=1).tolist()
+                        prd_id = np.random.choice(np.delete(nsList, rct_id), size=2, replace=True).tolist()
+                        # Search for potentially identical reactions
+                        all_rct = [i for i,x in enumerate(rct) if x==rct_id]
+                        all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
+                else:
+                    # BiBi
                     rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
                     prd_id = np.random.choice(np.delete(nsList, rct_id), size=2, replace=True).tolist()
-                    # Search for potentially identical reactions
                     all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
                     all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
                     
-            if regType == ng.RegulationType.DEFAULT:
-                act_id = []
-                inhib_id = []
-            elif regType == ng.RegulationType.INHIBITION:
-                act_id = []
-                delList = np.concatenate([rct_id, prd_id])
-                if len(realBoundaryIdsInd) > 0:
-                    delList = np.unique(np.append(delList, realBoundaryIdsInd))
-                cList = np.delete(nsList, delList)
-                if len(cList) == 0:
-                    inhib_id = []
-                    regType = ng.RegulationType.DEFAULT
-                else:
-                    inhib_id = np.random.choice(cList, size=1).tolist()
-            elif regType == ng.RegulationType.ACTIVATION:
-                inhib_id = []
-                delList = np.concatenate([rct_id, prd_id])
-                if len(realBoundaryIdsInd) > 0:
-                    delList = np.unique(np.append(delList, realBoundaryIdsInd))
-                cList = np.delete(nsList, delList)
-                if len(cList) == 0:
-                    act_id = []
-                    regType = ng.RegulationType.DEFAULT
-                else:
-                    act_id = np.random.choice(cList, size=1).tolist()
-            else:
-                delList = np.concatenate([rct_id, prd_id])
-                if len(realBoundaryIdsInd) > 0:
-                    delList = np.unique(np.append(delList, realBoundaryIdsInd))
-                cList = np.delete(nsList, delList)
-                if len(cList) < 2:
+                    while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
+                           (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or
+                           (len(set(all_rct) & set(all_prd)) > 0)):
+                        rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
+                        prd_id = np.random.choice(np.delete(nsList, rct_id), size=2, replace=True).tolist()
+                        # Search for potentially identical reactions
+                        all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
+                        all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
+                        
+                if regType == ng.RegulationType.DEFAULT:
                     act_id = []
                     inhib_id = []
-                    regType = ng.RegulationType.DEFAULT
+                elif regType == ng.RegulationType.INHIBITION:
+                    act_id = []
+                    delList = np.concatenate([rct_id, prd_id])
+                    if len(realBoundaryIdsInd) > 0:
+                        delList = np.unique(np.append(delList, realBoundaryIdsInd))
+                    cList = np.delete(nsList, delList)
+                    if len(cList) == 0:
+                        inhib_id = []
+                        regType = ng.RegulationType.DEFAULT
+                    else:
+                        inhib_id = np.random.choice(cList, size=1).tolist()
+                elif regType == ng.RegulationType.ACTIVATION:
+                    inhib_id = []
+                    delList = np.concatenate([rct_id, prd_id])
+                    if len(realBoundaryIdsInd) > 0:
+                        delList = np.unique(np.append(delList, realBoundaryIdsInd))
+                    cList = np.delete(nsList, delList)
+                    if len(cList) == 0:
+                        act_id = []
+                        regType = ng.RegulationType.DEFAULT
+                    else:
+                        act_id = np.random.choice(cList, size=1).tolist()
                 else:
-                    reg_id = np.random.choice(cList, size=2, replace=False)
-                    act_id = [reg_id[0]]
-                    inhib_id = [reg_id[1]]
-                
-            reactionList[r_idx] = [rType, 
-                                   regType, 
-                                   revType, 
-                                   rct_id, 
-                                   prd_id, 
-                                   act_id, 
-                                   inhib_id]
+                    delList = np.concatenate([rct_id, prd_id])
+                    if len(realBoundaryIdsInd) > 0:
+                        delList = np.unique(np.append(delList, realBoundaryIdsInd))
+                    cList = np.delete(nsList, delList)
+                    if len(cList) < 2:
+                        act_id = []
+                        inhib_id = []
+                        regType = ng.RegulationType.DEFAULT
+                    else:
+                        reg_id = np.random.choice(cList, size=2, replace=False)
+                        act_id = [reg_id[0]]
+                        inhib_id = [reg_id[1]]
+                    
+                reactionList[r_idx] = [rType, 
+                                       regType, 
+                                       revType, 
+                                       rct_id, 
+                                       prd_id, 
+                                       act_id, 
+                                       inhib_id]
             
             st = ng.getFullStoichiometryMatrix(reactionList, ns).tolist()
             stt = ng.removeBoundaryNodes(np.array(st))
@@ -261,9 +284,9 @@ def mutate_and_evaluate(listantStr, listdist, listrl):
             o += 1
         
         if o >= maxIter_mut:
-            eval_dist[m] = listdist[m]
-            eval_model[m] = listantStr[m]
-            eval_rl[m] = listrl[m]
+            eval_dist[m] = mut_dist[m]
+            eval_model[m] = mut_model[m]
+            eval_rl[m] = mut_rl[m]
         else:
             antStr = ng.generateAntimony(realFloatingIdsSort, realBoundaryIdsSort, 
                                           stt[1], stt[2], reactionList, 
@@ -280,12 +303,12 @@ def mutate_and_evaluate(listantStr, listdist, listrl):
                             bounds=p_bound, maxiter=optiMaxIter, tol=optiTol,
                             polish=optiPolish, seed=r_seed)
                 
-                if not res.success or res.fun == 10000:
-                    eval_dist[m] = listdist[m]
-                    eval_model[m] = listantStr[m]
-                    eval_rl[m] = listrl[m]
+                if not res.success or res.fun == 100000:
+                    eval_dist[m] = mut_dist[m]
+                    eval_model[m] = mut_model[m]
+                    eval_rl[m] = mut_rl[m]
                 else:
-                    if res.fun < listdist[m]:
+                    if res.fun < mut_dist[m]:
                         r.resetToOrigin()
                         r.setValues(r.getGlobalParameterIds(), res.x)
                         eval_dist[m] = res.fun
@@ -293,13 +316,13 @@ def mutate_and_evaluate(listantStr, listdist, listrl):
                         eval_rl[m] = reactionList
                         rl_track.append(reactionList)
                     else:
-                        eval_dist[m] = listdist[m]
-                        eval_model[m] = listantStr[m]
-                        eval_rl[m] = listrl[m]
+                        eval_dist[m] = mut_dist[m]
+                        eval_model[m] = mut_model[m]
+                        eval_rl[m] = mut_rl[m]
             except:
-                eval_dist[m] = listdist[m]
-                eval_model[m] = listantStr[m]
-                eval_rl[m] = listrl[m]
+                eval_dist[m] = mut_dist[m]
+                eval_model[m] = mut_model[m]
+                eval_rl[m] = mut_rl[m]
         antimony.clearPreviousLoads()
 
     return eval_dist, eval_model, eval_rl
@@ -346,7 +369,7 @@ def initialize():
             res = scipy.optimize.differential_evolution(f1, args=(r,), 
                                bounds=p_bound, maxiter=optiMaxIter, tol=optiTol,
                                polish=optiPolish, seed=r_seed)
-            if not res.success or res.fun == 10000:
+            if not res.success or res.fun == 100000:
                 numBadModels += 1
             else:
                 r.resetToOrigin()
@@ -421,7 +444,7 @@ def random_gen(listAntStr, listDist, listrl):
                             polish=optiPolish, seed=r_seed)
                 
                 # Failed to find solution
-                if not res.success or res.fun == 10000:
+                if not res.success or res.fun == 100000:
                     rnd_dist[l] = listDist[l]
                     rnd_model[l] = listAntStr[l]
                     rnd_rl[l] = listrl[l]
@@ -466,7 +489,7 @@ if __name__ == '__main__':
     # General settings ========================================================
     
     # Number of generations
-    n_gen = 30
+    n_gen = 25
     # Size of output ensemble
     ens_size = 100
     # Number of models passed on the next generation without mutation
@@ -477,6 +500,8 @@ if __name__ == '__main__':
     maxIter_gen = 100
     # Maximum iteration allowed for mutation
     maxIter_mut = 100
+    # Recombination probability
+    recomb = 0.3
     # Set conserved moiety
     conservedMoiety = False
     
@@ -522,7 +547,7 @@ if __name__ == '__main__':
     # Flag for saving current settings
     EXPORT_SETTINGS = True
     # Path to save the output
-    EXPORT_PATH = './outputs/FFL_m_4'
+    EXPORT_PATH = './outputs/FFL_m_3'
     
     # Flag to run algorithm
     RUN = True
@@ -569,8 +594,8 @@ if __name__ == '__main__':
     realFluxCC = realRR.getScaledFluxControlCoefficientMatrix()
     realConcCC = realRR.getScaledConcentrationControlCoefficientMatrix()
     
-    realFluxCC[np.abs(realFluxCC) < 1e-12] = 0
-    realConcCC[np.abs(realConcCC) < 1e-12] = 0
+    realFluxCC[np.abs(realFluxCC) < 1e-8] = 0
+    realConcCC[np.abs(realConcCC) < 1e-8] = 0
     
     # Ordering
     realFluxCC = realFluxCC[np.argsort(realFloatingIds)]
@@ -650,12 +675,14 @@ if __name__ == '__main__':
             mut_ind = np.append(mut_ind, minind)
             mut_ind_inv = np.setdiff1d(np.arange(ens_size), mut_ind)
             
-            eval_dist, eval_model, eval_rl = mutate_and_evaluate(ens_model[mut_ind], 
-                                                                 ens_dist[mut_ind], 
-                                                                 ens_rl[mut_ind])
-            ens_model[mut_ind] = eval_model
-            ens_dist[mut_ind] = eval_dist
-            ens_rl[mut_ind] = eval_rl
+            evol_dist, evol_model, evol_rl = mutate_and_evaluate(ens_model, 
+                                                                  ens_dist, 
+                                                                  ens_rl,
+                                                                  minind,
+                                                                  mut_ind)
+            ens_model[mut_ind] = evol_model
+            ens_dist[mut_ind] = evol_dist
+            ens_rl[mut_ind] = evol_rl
             
     #        for tt in range(len(mut_ind)):
     #            r = te.loada(ens_model[mut_ind[tt]])
@@ -796,6 +823,7 @@ if __name__ == '__main__':
             settings['mut_size'] = mut_size
             settings['maxIter_gen'] = maxIter_gen
             settings['maxIter_mut'] = maxIter_mut
+            settings['recomb'] = recomb
             settings['optiMaxIter'] = optiMaxIter
             settings['optiTol'] = optiTol
             settings['optiPolish'] = optiPolish

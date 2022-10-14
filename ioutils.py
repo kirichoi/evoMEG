@@ -27,6 +27,7 @@ def exportSettings(settings, path=None):
     outputtxt.writelines('mut_size, '+str(settings['mut_size']) + '\n')
     outputtxt.writelines('maxIter_gen, '+str(settings['maxIter_gen']) + '\n')
     outputtxt.writelines('maxIter_mut, '+str(settings['maxIter_mut']) + '\n')
+    outputtxt.writelines('recomb, '+str(settings['recomb']) + '\n')
     outputtxt.writelines('optiMaxIter, '+str(settings['optiMaxIter']) + '\n')
     outputtxt.writelines('optiTol, '+str(settings['optiTol']) + '\n')
     outputtxt.writelines('optiPolish, '+str(settings['optiPolish']) + '\n')
