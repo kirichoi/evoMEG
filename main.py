@@ -151,14 +151,13 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, minind, mutind):
         o = 0
         
         while ((stt[1] != realFloatingIdsIndSort or stt[2] != realBoundaryIdsIndSort or
-                reactionList in rl_track or np.sum(stt[0]) != 0) and (o < maxIter_mut)):
+                reactionList in rl_track or np.sum(stt[0]) != 0 or np.linalg.matrix_rank(stt[0]) == realNumFloating) and (o < maxIter_mut)):
             r_idx = np.random.choice(np.arange(nr), p=np.divide(tempdiff1,np.sum(tempdiff1)))
             
             reactionList = copy.deepcopy(mut_rl[m])
             
             if np.random.random() < recomb:
                 reactionList[r_idx] = ens_rl[minrndidx][r_idx]
-                
             else:
                 posRctInd = np.append(np.array(realFloatingIdsIndSort)[np.nonzero(realConcCC[:,r_idx])[0]], 
                                       np.array(realBoundaryIdsIndSort)).astype(int)
@@ -350,7 +349,7 @@ def initialize():
         stt[0][stt[0]<-1] = -1
         # Ensure no redundant model
         while (stt[1] != realFloatingIdsIndSort or stt[2] != realBoundaryIdsIndSort 
-               or rl in rl_track or np.sum(stt[0]) != 0):
+               or rl in rl_track or np.sum(stt[0]) != 0 or np.linalg.matrix_rank(stt[0]) == realNumFloating):
             rl = ng.generateReactionList(ns, nr, realBoundaryIdsInd)
             st = ng.getFullStoichiometryMatrix(rl, ns).tolist()
             stt = ng.removeBoundaryNodes(np.array(st))
@@ -415,7 +414,7 @@ def random_gen(listAntStr, listDist, listrl):
         stt[0][stt[0]<-1] = -1
         # Ensure no redundant models
         while ((stt[1] != realFloatingIdsIndSort or stt[2] != realBoundaryIdsIndSort or
-                rl in rl_track or np.sum(stt[0]) != 0) and (d < maxIter_gen)):
+                rl in rl_track or np.sum(stt[0]) != 0 or np.linalg.matrix_rank(stt[0]) == realNumFloating) and (d < maxIter_gen)):
             rl = ng.generateReactionList(ns, nr, realBoundaryIdsInd)
             st = ng.getFullStoichiometryMatrix(rl, ns).tolist()
             stt = ng.removeBoundaryNodes(np.array(st))
@@ -483,13 +482,13 @@ if __name__ == '__main__':
     
     # 'FFL_m', 'Linear_m', 'Nested_m', 'Branched_m', 'sigPath'
     # 'FFL_r', 'Linear_r', 'Nested_r', 'Branched_r'
-    modelType = 'FFL_m'
+    modelType = 'Linear_m'
     
     
     # General settings ========================================================
     
     # Number of generations
-    n_gen = 25
+    n_gen = 100
     # Size of output ensemble
     ens_size = 100
     # Number of models passed on the next generation without mutation
@@ -547,7 +546,7 @@ if __name__ == '__main__':
     # Flag for saving current settings
     EXPORT_SETTINGS = True
     # Path to save the output
-    EXPORT_PATH = './outputs/FFL_m_3'
+    EXPORT_PATH = './outputs/Linear_m_1'
     
     # Flag to run algorithm
     RUN = True

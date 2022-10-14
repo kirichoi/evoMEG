@@ -208,7 +208,7 @@ def generateReactionList(nSpecies, nReactions, boundaryIdx):
 # [New Stoichiometry matrix, list of floatingIds, list of boundaryIds]
 def getFullStoichiometryMatrix(reactionList, ns):
     reactionListCopy = copy.deepcopy(reactionList)
-    st = np.zeros((ns, len(reactionListCopy)))
+    st = np.zeros((ns, len(reactionListCopy)), dtype=int)
     
     for index, rind in enumerate(reactionListCopy):
         if rind[0] == ReactionType.UNIUNI:
