@@ -106,44 +106,27 @@ def callbackF(X, convergence=0.):
     print(str(counts) + ", " + str(countf))
     return False
 
-def mutate_and_evaluate(ens_model, ens_dist, ens_rl, minind, mutind):
+def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind):
     global countf
     global counts
     
     eval_dist = np.empty(mut_size)
     eval_model = np.empty(mut_size, dtype='object')
     eval_rl = np.empty(mut_size, dtype='object')
+    eval_concCC = np.empty(mut_size, dtype='object')
     
     mut_model = ens_model[mutind]
     mut_dist = ens_dist[mutind]
     mut_rl = ens_rl[mutind]
+    mut_concCC = ens_concCC[mutind]
     
     for m in mut_range:
-        r1 = te.loada(mut_model[m])
-        r1.simulate(0, 10000, 5)
-        
-        concCC1 = customGetScaledConcentrationControlCoefficientMatrix(r1)
-        
-        concCC1[np.abs(concCC1) < 1e-8] = 0 # Set small values to zero
-        
         cFalse1 = (1 + np.sum(np.not_equal(np.sign(np.array(realConcCC)), 
-                                          np.sign(np.array(concCC1))), axis=0))
+                                          np.sign(np.array(mut_concCC[m]))), axis=0))
 
-        tempdiff1 = cFalse1*np.linalg.norm(realConcCC - concCC1, axis=0)
+        tempdiff = cFalse1*np.linalg.norm(realConcCC - mut_concCC[m], axis=0)
         
         minrndidx = np.random.choice(minind)
-        
-        r2 = te.loada(ens_model[minrndidx])
-        r2.simulate(0, 10000, 5)
-        
-        concCC2 = customGetScaledConcentrationControlCoefficientMatrix(r2)
-        
-        concCC2[np.abs(concCC2) < 1e-8] = 0 # Set small values to zero
-        
-        cFalse2 = (1 + np.sum(np.not_equal(np.sign(np.array(realConcCC)), 
-                                          np.sign(np.array(concCC2))), axis=0))
-
-        tempdiff2 = cFalse2*np.linalg.norm(realConcCC - concCC2, axis=0)
         
         stt = [[1],[],[]]
         reactionList = rl_track[0]
@@ -151,8 +134,8 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, minind, mutind):
         o = 0
         
         while ((stt[1] != realFloatingIdsIndSort or stt[2] != realBoundaryIdsIndSort or
-                reactionList in rl_track or np.sum(stt[0]) != 0 or np.linalg.matrix_rank(stt[0]) == realNumFloating) and (o < maxIter_mut)):
-            r_idx = np.random.choice(np.arange(nr), p=np.divide(tempdiff1,np.sum(tempdiff1)))
+                reactionList in rl_track or np.sum(stt[0]) != 0 or np.linalg.matrix_rank(stt[0]) != realNumFloating) and (o < maxIter_mut)):
+            r_idx = np.random.choice(np.arange(nr), p=np.divide(tempdiff, np.sum(tempdiff)))
             
             reactionList = copy.deepcopy(mut_rl[m])
             
@@ -286,13 +269,16 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, minind, mutind):
             eval_dist[m] = mut_dist[m]
             eval_model[m] = mut_model[m]
             eval_rl[m] = mut_rl[m]
+            eval_concCC[m] = mut_concCC[m]
         else:
             antStr = ng.generateAntimony(realFloatingIdsSort, realBoundaryIdsSort, 
                                           stt[1], stt[2], reactionList, 
                                           boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
-                r.steadyState()
+                r.simulate(0, 10000, 5)
+                concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
+                r.reset()
                 
                 counts = 0
                 countf = 0
@@ -306,6 +292,7 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, minind, mutind):
                     eval_dist[m] = mut_dist[m]
                     eval_model[m] = mut_model[m]
                     eval_rl[m] = mut_rl[m]
+                    eval_concCC[m] = mut_concCC[m]
                 else:
                     if res.fun < mut_dist[m]:
                         r.resetToOrigin()
@@ -314,17 +301,24 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, minind, mutind):
                         eval_model[m] = r.getAntimony(current=True)
                         eval_rl[m] = reactionList
                         rl_track.append(reactionList)
+                        r.simulate(0, 10000, 5)
+                        concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
+                        r.reset()
+                        concCC[np.abs(concCC) < 1e-8] = 0
+                        eval_concCC[m] = concCC
                     else:
                         eval_dist[m] = mut_dist[m]
                         eval_model[m] = mut_model[m]
                         eval_rl[m] = mut_rl[m]
+                        eval_concCC[m] = mut_concCC[m]
             except:
                 eval_dist[m] = mut_dist[m]
                 eval_model[m] = mut_model[m]
                 eval_rl[m] = mut_rl[m]
+                eval_concCC[m] = mut_concCC[m]
         antimony.clearPreviousLoads()
 
-    return eval_dist, eval_model, eval_rl
+    return eval_dist, eval_model, eval_rl, eval_concCC
 
 
 def initialize():
@@ -339,6 +333,7 @@ def initialize():
     ens_model = np.empty(ens_size, dtype='object')
     ens_rl = np.empty(ens_size, dtype='object')
     rl_track = []
+    ens_concCC = np.empty(ens_size, dtype='object')
     
     # Initial Random generation
     while (numGoodModels < ens_size):
@@ -349,7 +344,7 @@ def initialize():
         stt[0][stt[0]<-1] = -1
         # Ensure no redundant model
         while (stt[1] != realFloatingIdsIndSort or stt[2] != realBoundaryIdsIndSort 
-               or rl in rl_track or np.sum(stt[0]) != 0 or np.linalg.matrix_rank(stt[0]) == realNumFloating):
+               or rl in rl_track or np.sum(stt[0]) != 0 or np.linalg.matrix_rank(stt[0]) != realNumFloating):
             rl = ng.generateReactionList(ns, nr, realBoundaryIdsInd)
             st = ng.getFullStoichiometryMatrix(rl, ns).tolist()
             stt = ng.removeBoundaryNodes(np.array(st))
@@ -359,7 +354,9 @@ def initialize():
                                       stt[2], rl, boundary_init=realBoundaryVal)
         try:
             r = te.loada(antStr)
-            r.steadyState()
+            r.simulate(0, 10000, 5)
+            concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
+            r.reset()
 
             counts = 0
             countf = 0
@@ -377,6 +374,11 @@ def initialize():
                 ens_model[numGoodModels] = r.getAntimony(current=True)
                 ens_rl[numGoodModels] = rl
                 rl_track.append(rl)
+                r.simulate(0, 10000, 5)
+                concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
+                r.reset()
+                concCC[np.abs(concCC) < 1e-8] = 0
+                ens_concCC[numGoodModels] = concCC
                 
                 numGoodModels = numGoodModels + 1
         except:
@@ -392,10 +394,10 @@ def initialize():
     print("Number of total iterations = " + str(numIter))
     print("Number of bad models = " + str(numBadModels))
     
-    return ens_dist, ens_model, ens_rl, rl_track
+    return ens_dist, ens_model, ens_rl, rl_track, ens_concCC
 
 
-def random_gen(listAntStr, listDist, listrl):
+def random_gen(listAntStr, listDist, listrl, listconcCC):
     global countf
     global counts
     
@@ -404,6 +406,7 @@ def random_gen(listAntStr, listDist, listrl):
     rnd_dist = np.empty(rndSize)
     rnd_model = np.empty(rndSize, dtype='object')
     rnd_rl = np.empty(rndSize, dtype='object')
+    rnd_concCC = np.empty(rndSize, dtype='object')
     
     for l in range(rndSize):
         d = 0
@@ -414,7 +417,7 @@ def random_gen(listAntStr, listDist, listrl):
         stt[0][stt[0]<-1] = -1
         # Ensure no redundant models
         while ((stt[1] != realFloatingIdsIndSort or stt[2] != realBoundaryIdsIndSort or
-                rl in rl_track or np.sum(stt[0]) != 0 or np.linalg.matrix_rank(stt[0]) == realNumFloating) and (d < maxIter_gen)):
+                rl in rl_track or np.sum(stt[0]) != 0 or np.linalg.matrix_rank(stt[0]) != realNumFloating) and (d < maxIter_gen)):
             rl = ng.generateReactionList(ns, nr, realBoundaryIdsInd)
             st = ng.getFullStoichiometryMatrix(rl, ns).tolist()
             stt = ng.removeBoundaryNodes(np.array(st))
@@ -427,12 +430,15 @@ def random_gen(listAntStr, listDist, listrl):
             rnd_dist[l] = listDist[l]
             rnd_model[l] = listAntStr[l]
             rnd_rl[l] = listrl[l]
+            rnd_concCC[l] = listconcCC[l]
         else:
             antStr = ng.generateAntimony(realFloatingIdsSort, realBoundaryIdsSort, 
                             stt[1], stt[2], rl, boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
-                r.steadyState()
+                r.simulate(0, 10000, 5)
+                concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
+                r.reset()
                 
                 counts = 0
                 countf = 0
@@ -447,6 +453,7 @@ def random_gen(listAntStr, listDist, listrl):
                     rnd_dist[l] = listDist[l]
                     rnd_model[l] = listAntStr[l]
                     rnd_rl[l] = listrl[l]
+                    rnd_concCC[l] = listconcCC[l]
                 else:
                     if res.fun < listDist[l]:
                         r.resetToOrigin()
@@ -455,17 +462,24 @@ def random_gen(listAntStr, listDist, listrl):
                         rnd_model[l] = r.getAntimony(current=True)
                         rnd_rl[l] = rl
                         rl_track.append(rl)
+                        r.simulate(0, 10000, 5)
+                        concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
+                        r.reset()
+                        concCC[np.abs(concCC) < 1e-8] = 0
+                        rnd_concCC[l] = concCC
                     else:
                         rnd_dist[l] = listDist[l]
                         rnd_model[l] = listAntStr[l]
                         rnd_rl[l] = listrl[l]
+                        rnd_concCC[l] = listconcCC[l]
             except:
                 rnd_dist[l] = listDist[l]
                 rnd_model[l] = listAntStr[l]
                 rnd_rl[l] = listrl[l]
+                rnd_concCC[l] = listconcCC[l]
         antimony.clearPreviousLoads()
         
-    return rnd_dist, rnd_model, rnd_rl
+    return rnd_dist, rnd_model, rnd_rl, rnd_concCC
 
 # TODO: simulated annealing (multiply to fitness for rate constants)
 if __name__ == '__main__':
@@ -482,15 +496,15 @@ if __name__ == '__main__':
     
     # 'FFL_m', 'Linear_m', 'Nested_m', 'Branched_m', 'sigPath'
     # 'FFL_r', 'Linear_r', 'Nested_r', 'Branched_r'
-    modelType = 'Linear_m'
+    modelType = 'Branched_m'
     
     
     # General settings ========================================================
     
     # Number of generations
-    n_gen = 100
+    n_gen = 200
     # Size of output ensemble
-    ens_size = 100
+    ens_size = 200
     # Number of models passed on the next generation without mutation
     pass_size = int(ens_size/10)
     # Number of models to mutate
@@ -500,7 +514,7 @@ if __name__ == '__main__':
     # Maximum iteration allowed for mutation
     maxIter_mut = 100
     # Recombination probability
-    recomb = 0.3
+    recomb = 0.2
     # Set conserved moiety
     conservedMoiety = False
     
@@ -546,7 +560,7 @@ if __name__ == '__main__':
     # Flag for saving current settings
     EXPORT_SETTINGS = True
     # Path to save the output
-    EXPORT_PATH = './outputs/Linear_m_1'
+    EXPORT_PATH = './outputs/Branched_m_2'
     
     # Flag to run algorithm
     RUN = True
@@ -647,7 +661,7 @@ if __name__ == '__main__':
         t1 = time.time()
         
         # Initialize
-        ens_dist, ens_model, ens_rl, rl_track = initialize()
+        ens_dist, ens_model, ens_rl, rl_track, ens_concCC = initialize()
         
         dist_top_ind = np.argsort(ens_dist)
         dist_top = ens_dist[dist_top_ind]
@@ -674,14 +688,16 @@ if __name__ == '__main__':
             mut_ind = np.append(mut_ind, minind)
             mut_ind_inv = np.setdiff1d(np.arange(ens_size), mut_ind)
             
-            evol_dist, evol_model, evol_rl = mutate_and_evaluate(ens_model, 
-                                                                  ens_dist, 
-                                                                  ens_rl,
-                                                                  minind,
-                                                                  mut_ind)
+            evol_dist, evol_model, evol_rl, evol_concCC = mutate_and_evaluate(ens_model, 
+                                                                              ens_dist, 
+                                                                              ens_rl,
+                                                                              ens_concCC,
+                                                                              minind,
+                                                                              mut_ind)
             ens_model[mut_ind] = evol_model
             ens_dist[mut_ind] = evol_dist
             ens_rl[mut_ind] = evol_rl
+            ens_concCC[mut_ind] = evol_concCC
             
     #        for tt in range(len(mut_ind)):
     #            r = te.loada(ens_model[mut_ind[tt]])
@@ -696,12 +712,14 @@ if __name__ == '__main__':
     #        if breakFlag:
     #            break
             
-            rnd_dist, rnd_model, rnd_rl = random_gen(ens_model[mut_ind_inv], 
-                                                     ens_dist[mut_ind_inv], 
-                                                     ens_rl[mut_ind_inv])
+            rnd_dist, rnd_model, rnd_rl, rnd_concCC = random_gen(ens_model[mut_ind_inv], 
+                                                                 ens_dist[mut_ind_inv], 
+                                                                 ens_rl[mut_ind_inv],
+                                                                 ens_concCC[mut_ind_inv])
             ens_model[mut_ind_inv] = rnd_model
             ens_dist[mut_ind_inv] = rnd_dist
             ens_rl[mut_ind_inv] = rnd_rl
+            ens_concCC[mut_ind_inv] = rnd_concCC
             
             dist_top_ind = np.argsort(ens_dist)
             dist_top = ens_dist[dist_top_ind]
