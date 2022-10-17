@@ -528,13 +528,13 @@ def generateParameterBoundary(glgp):
     
     for i in range(len(glgp)):
         if glgp[i].startswith('Kf'):
-            pBound.append((1e-3, 1.))
+            pBound.append((1e-2, 1.))
         elif glgp[i].startswith('Kr'):
-            pBound.append((1e-3, 1.))
+            pBound.append((1e-2, 1.))
         elif glgp[i].startswith('Ka'):
-            pBound.append((1e-3, 1.))
+            pBound.append((1e-2, 1.))
         elif glgp[i].startswith('Ki'):
-            pBound.append((1e-3, 1.))
+            pBound.append((1e-2, 1.))
 
     return pBound
     
