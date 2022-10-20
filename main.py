@@ -58,6 +58,15 @@ def customGetScaledConcentrationControlCoefficientMatrix(r):
     return T4
 
 
+def check_duplicate_reaction(data):
+    ind = np.lexsort(data)
+    diff = np.any(data.T[ind[1:]] != data.T[ind[:-1]], axis=1)
+    edges = np.where(diff)[0] + 1
+    result = np.split(ind, edges)
+    result = [group for group in result if len(group) >= 2]
+    return result
+
+
 def f1(k_list, *args):
     global counts
     global countf
@@ -130,13 +139,13 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind)
         
         minrndidx = np.random.choice(minind)
         
-        stt = [[1],[],[]]
+        stt = [np.zeros((2,2)),[],[]]
         reactionList = rl_track[0]
         
         o = 0
         
         while ((stt[1] != realFloatingIdsIndSort or stt[2] != realBoundaryIdsIndSort or
-                reactionList in rl_track or np.sum(stt[0]) != 0 or 
+                reactionList in rl_track or np.sum(stt[0]) != 0 or len(check_duplicate_reaction(stt[0])) > 0 or
                 np.linalg.matrix_rank(stt[0]) != realNumFloating) and (o < maxIter_mut)):
             r_idx = np.random.choice(np.arange(nr), p=np.divide(tempdiff, np.sum(tempdiff)))
             
@@ -289,7 +298,7 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind)
                             bounds=p_bound, maxiter=optiMaxIter, tol=optiTol,
                             polish=optiPolish, seed=r_seed)
                 
-                if not res.success or res.fun == 100000 or np.isnan(concCC).any():
+                if not res.success or res.fun == 100000:
                     eval_dist[m] = mut_dist[m]
                     eval_model[m] = mut_model[m]
                     eval_rl[m] = mut_rl[m]
@@ -298,13 +307,20 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind)
                     if res.fun < mut_dist[m]:
                         r.resetToOrigin()
                         r.setValues(r.getGlobalParameterIds(), res.x)
-                        eval_dist[m] = res.fun
-                        eval_model[m] = r.getAntimony(current=True)
-                        eval_rl[m] = reactionList
-                        rl_track.append(reactionList)
                         concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
                         concCC[np.abs(concCC) < 1e-8] = 0
-                        eval_concCC[m] = concCC
+                        
+                        if np.isnan(concCC).any():
+                            eval_dist[m] = mut_dist[m]
+                            eval_model[m] = mut_model[m]
+                            eval_rl[m] = mut_rl[m]
+                            eval_concCC[m] = mut_concCC[m]
+                        else:
+                            eval_dist[m] = res.fun
+                            eval_model[m] = r.getAntimony(current=True)
+                            eval_rl[m] = reactionList
+                            rl_track.append(reactionList)
+                            eval_concCC[m] = concCC
                     else:
                         eval_dist[m] = mut_dist[m]
                         eval_model[m] = mut_model[m]
@@ -355,7 +371,7 @@ def initialize():
         try:
             r = te.loada(antStr)
             concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
-
+            
             counts = 0
             countf = 0
             
@@ -363,7 +379,7 @@ def initialize():
             res = scipy.optimize.differential_evolution(f1, args=(r,), 
                                bounds=p_bound, maxiter=optiMaxIter, tol=optiTol,
                                polish=optiPolish, seed=r_seed)
-            if not res.success or res.fun == 100000 or np.isnan(concCC).any():
+            if not res.success or res.fun == 100000:
                 numBadModels += 1
             else:
                 r.resetToOrigin()
@@ -496,7 +512,7 @@ if __name__ == '__main__':
     # General settings ========================================================
     
     # Number of generations
-    n_gen = 200
+    n_gen = 500
     # Size of output ensemble
     ens_size = 200
     # Number of models passed on the next generation without mutation
@@ -508,7 +524,7 @@ if __name__ == '__main__':
     # Maximum iteration allowed for mutation
     maxIter_mut = 100
     # Recombination probability
-    recomb = 0.2
+    recomb = 0.3
     # Set conserved moiety
     conservedMoiety = False
     
