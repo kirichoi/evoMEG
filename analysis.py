@@ -164,7 +164,7 @@ def selectWithKernalDensity(model_top, dist_top, export_flag=False):
         minInd = np.array([[len(model_top) - 1]])
 
     if export_flag:
-        minInd = np.array([[len(model_top) - 1]])
+        minInd = len(model_top)
     
     kde_idx = (np.abs(dist_top - kde_xarr[minInd[0][0]])).argmin()
     
