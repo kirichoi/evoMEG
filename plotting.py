@@ -123,7 +123,7 @@ def plotDistanceHistogramWithKDE(kde_xarr, dist_top, log_dens, minInd, nbin=40, 
     """
     
     hist = plt.hist(dist_top, bins=nbin, density=True)
-    plt.vlines(dist_top[minInd[0][0]], 0, np.max(hist[0]), linestyles='dashed')
+    plt.vlines(dist_top[minInd[0][0]-1], 0, np.max(hist[0]), linestyles='dashed')
     plt.plot(kde_xarr, np.exp(log_dens), color='tab:red')
     plt.xlabel("Distance", fontsize=15)
     plt.ylabel("Normalized Frequency", fontsize=15)
