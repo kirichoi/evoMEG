@@ -38,7 +38,7 @@ def customGetScaledConcentrationControlCoefficientMatrix(r):
 
     '''
     
-    r.simulate(0, 10000, 5)
+    re = r.simulate(0, 10000, 5)
     r.steadyState()
     uelast = r.getUnscaledElasticityMatrix()
     Nr = r.getNrMatrix()
@@ -75,7 +75,7 @@ def f1(k_list, *args):
     args[0].setValues(args[0].getGlobalParameterIds(), k_list)
     
     try:
-        args[0].simulate(0, 10000, 5)
+        re = args[0].simulate(0, 10000, 5)
         uelast = args[0].getUnscaledElasticityMatrix()
         Nr = args[0].getNrMatrix()
         T1 = np.dot(Nr, uelast)
@@ -331,6 +331,11 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind)
                 eval_model[m] = mut_model[m]
                 eval_rl[m] = mut_rl[m]
                 eval_concCC[m] = mut_concCC[m]
+        
+        try:
+            r.clearModel()
+        except:
+            pass
         antimony.clearPreviousLoads()
         antimony.freeAll()
 
@@ -395,13 +400,19 @@ def initialize():
                 numGoodModels = numGoodModels + 1
         except:
             numBadModels = numBadModels + 1
-        antimony.clearPreviousLoads()
-        antimony.freeAll()
+        
         numIter = numIter + 1
         if int(numIter/1000) == (numIter/1000):
             print("Number of iterations = " + str(numIter))
         if int(numIter/10000) == (numIter/10000):
             print("Number of good models = " + str(numGoodModels))
+    
+        try:
+            r.clearModel()
+        except:
+            pass
+        antimony.clearPreviousLoads()
+        antimony.freeAll()
     
     print("In generation: 1")
     print("Number of total iterations = " + str(numIter))
@@ -486,6 +497,11 @@ def random_gen(listAntStr, listDist, listrl, listconcCC):
                 rnd_model[l] = listAntStr[l]
                 rnd_rl[l] = listrl[l]
                 rnd_concCC[l] = listconcCC[l]
+        
+        try:
+            r.clearModel()
+        except:
+            pass        
         antimony.clearPreviousLoads()
         antimony.freeAll()
         
@@ -570,7 +586,7 @@ if __name__ == '__main__':
     # Flag for saving current settings
     EXPORT_SETTINGS = True
     # Path to save the output
-    EXPORT_PATH = './outputs/Branched_m_1'
+    EXPORT_PATH = './outputs/Branched_m_4'
     
     # Flag to run algorithm
     RUN = True
@@ -608,12 +624,12 @@ if __name__ == '__main__':
     
     # Control Coefficients and Fluxes
     
-    realRR.simulate(0, 10000, 5)
+    re = realRR.simulate(0, 10000, 5)
     realSteadyState = realRR.getFloatingSpeciesConcentrations()
     realSteadyStateRatio = np.divide(realSteadyState, np.min(realSteadyState))
     realFlux = realRR.getReactionRates()
     realRR.reset()
-    realRR.simulate(0, 10000, 5)
+    re = realRR.simulate(0, 10000, 5)
     realFluxCC = realRR.getScaledFluxControlCoefficientMatrix()
     realConcCC = realRR.getScaledConcentrationControlCoefficientMatrix()
     
