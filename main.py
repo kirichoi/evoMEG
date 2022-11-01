@@ -132,10 +132,10 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind)
     mut_concCC = ens_concCC[mutind]
     
     for m in mut_range:
-        cFalse1 = (1 + np.sum(np.not_equal(np.sign(np.array(realConcCC)), 
+        cFalse = (1 + np.sum(np.not_equal(np.sign(np.array(realConcCC)), 
                                           np.sign(np.array(mut_concCC[m]))), axis=0))
 
-        tempdiff = cFalse1*np.linalg.norm(realConcCC - mut_concCC[m], axis=0)
+        tempdiff = cFalse*np.linalg.norm(realConcCC - mut_concCC[m], axis=0)
         
         minrndidx = np.random.choice(minind)
         
@@ -154,7 +154,9 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind)
             if np.random.random() < recomb:
                 reactionList[r_idx] = ens_rl[minrndidx][r_idx]
             else:
-                posRctInd = np.append(np.array(realFloatingIdsIndSort)[np.nonzero(realConcCC[:,r_idx])[0]], 
+                posRctInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] < 0], 
+                                      np.array(realBoundaryIdsIndSort)).astype(int)
+                posPrdInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] >= 0], 
                                       np.array(realBoundaryIdsIndSort)).astype(int)
                 
                 rct = [col[3] for col in reactionList]
@@ -166,7 +168,7 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind)
                 if rType == ng.ReactionType.UNIUNI:
                     # UniUni
                     rct_id = np.random.choice(posRctInd, size=1).tolist()
-                    prd_id = np.random.choice(np.delete(nsList, rct_id), size=1).tolist()
+                    prd_id = np.random.choice(posPrdInd, size=1).tolist()
                     all_rct = [i for i,x in enumerate(rct) if x==rct_id]
                     all_prd = [i for i,x in enumerate(prd) if x==prd_id]
                     
@@ -174,14 +176,14 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind)
                            (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or 
                            (len(set(all_rct) & set(all_prd)) > 0)):
                         rct_id = np.random.choice(posRctInd, size=1).tolist()
-                        prd_id = np.random.choice(np.delete(nsList, rct_id), size=1).tolist()
+                        prd_id = np.random.choice(posPrdInd, size=1).tolist()
                         # Search for potentially identical reactions
                         all_rct = [i for i,x in enumerate(rct) if x==rct_id]
                         all_prd = [i for i,x in enumerate(prd) if x==prd_id]
                 elif rType == ng.ReactionType.BIUNI:
                     # BiUni
                     rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
-                    prd_id = np.random.choice(np.delete(nsList, rct_id), size=1).tolist()
+                    prd_id = np.random.choice(posPrdInd, size=1).tolist()
                     all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
                     all_prd = [i for i,x in enumerate(prd) if x==prd_id]
                     
@@ -189,14 +191,14 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind)
                            (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or 
                            (len(set(all_rct) & set(all_prd)) > 0)):
                         rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
-                        prd_id = np.random.choice(np.delete(nsList, rct_id), size=1).tolist()
+                        prd_id = np.random.choice(posPrdInd, size=1).tolist()
                         # Search for potentially identical reactions
                         all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
                         all_prd = [i for i,x in enumerate(prd) if x==prd_id]
                 elif rType == ng.ReactionType.UNIBI:
                     # UniBi
                     rct_id = np.random.choice(posRctInd, size=1).tolist()
-                    prd_id = np.random.choice(np.delete(nsList, rct_id), size=2, replace=True).tolist()
+                    prd_id = np.random.choice(posPrdInd, size=2, replace=True).tolist()
                     all_rct = [i for i,x in enumerate(rct) if x==rct_id]
                     all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
                     
@@ -204,14 +206,14 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind)
                            (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or 
                            (len(set(all_rct) & set(all_prd)) > 0)):
                         rct_id = np.random.choice(posRctInd, size=1).tolist()
-                        prd_id = np.random.choice(np.delete(nsList, rct_id), size=2, replace=True).tolist()
+                        prd_id = np.random.choice(posPrdInd, size=2, replace=True).tolist()
                         # Search for potentially identical reactions
                         all_rct = [i for i,x in enumerate(rct) if x==rct_id]
                         all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
                 else:
                     # BiBi
                     rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
-                    prd_id = np.random.choice(np.delete(nsList, rct_id), size=2, replace=True).tolist()
+                    prd_id = np.random.choice(posPrdInd, size=2, replace=True).tolist()
                     all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
                     all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
                     
@@ -219,7 +221,7 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind)
                            (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or
                            (len(set(all_rct) & set(all_prd)) > 0)):
                         rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
-                        prd_id = np.random.choice(np.delete(nsList, rct_id), size=2, replace=True).tolist()
+                        prd_id = np.random.choice(posPrdInd, size=2, replace=True).tolist()
                         # Search for potentially identical reactions
                         all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
                         all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
@@ -358,7 +360,7 @@ def initialize():
     
     # Initial Random generation
     while (numGoodModels < ens_size):
-        rl = ng.generateReactionList(ns, nr, realBoundaryIdsInd)
+        rl = ng.generateReactionList(ns, nr, realFloatingIdsIndSort, realBoundaryIdsIndSort, realConcCC)
         st = ng.getFullStoichiometryMatrix(rl, ns).tolist()
         stt = ng.removeBoundaryNodes(np.array(st))
         stt[0][stt[0]>1] = 1
@@ -366,7 +368,7 @@ def initialize():
         # Ensure no redundant model
         while (stt[1] != realFloatingIdsIndSort or stt[2] != realBoundaryIdsIndSort 
                or rl in rl_track or np.sum(stt[0]) != 0 or np.linalg.matrix_rank(stt[0]) != realNumFloating):
-            rl = ng.generateReactionList(ns, nr, realBoundaryIdsInd)
+            rl = ng.generateReactionList(ns, nr, realFloatingIdsIndSort, realBoundaryIdsIndSort, realConcCC)
             st = ng.getFullStoichiometryMatrix(rl, ns).tolist()
             stt = ng.removeBoundaryNodes(np.array(st))
             stt[0][stt[0]>1] = 1
@@ -434,7 +436,7 @@ def random_gen(listAntStr, listDist, listrl, listconcCC):
     
     for l in range(rndSize):
         d = 0
-        rl = ng.generateReactionList(ns, nr, realBoundaryIdsInd)
+        rl = ng.generateReactionList(ns, nr, realFloatingIdsIndSort, realBoundaryIdsIndSort, realConcCC)
         st = ng.getFullStoichiometryMatrix(rl, ns).tolist()
         stt = ng.removeBoundaryNodes(np.array(st))
         stt[0][stt[0]>1] = 1
@@ -442,7 +444,7 @@ def random_gen(listAntStr, listDist, listrl, listconcCC):
         # Ensure no redundant models
         while ((stt[1] != realFloatingIdsIndSort or stt[2] != realBoundaryIdsIndSort or
                 rl in rl_track or np.sum(stt[0]) != 0 or np.linalg.matrix_rank(stt[0]) != realNumFloating) and (d < maxIter_gen)):
-            rl = ng.generateReactionList(ns, nr, realBoundaryIdsInd)
+            rl = ng.generateReactionList(ns, nr, realFloatingIdsIndSort, realBoundaryIdsIndSort, realConcCC)
             st = ng.getFullStoichiometryMatrix(rl, ns).tolist()
             stt = ng.removeBoundaryNodes(np.array(st))
             stt[0][stt[0]>1] = 1
@@ -528,9 +530,9 @@ if __name__ == '__main__':
     # General settings ========================================================
     
     # Number of generations
-    n_gen = 500
+    n_gen = 50
     # Size of output ensemble
-    ens_size = 200
+    ens_size = 20
     # Number of models passed on the next generation without mutation
     pass_size = int(ens_size/10)
     # Number of models to mutate
@@ -586,7 +588,7 @@ if __name__ == '__main__':
     # Flag for saving current settings
     EXPORT_SETTINGS = True
     # Path to save the output
-    EXPORT_PATH = './outputs/Branched_m_4'
+    EXPORT_PATH = './outputs/Branched_m_test_1'
     
     # Flag to run algorithm
     RUN = True

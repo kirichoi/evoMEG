@@ -81,12 +81,17 @@ def pickReactionType():
 # Generates a reaction network in the form of a reaction list
 # reactionList = [nSpecies, reaction, ....]
 # reaction = [reactionType, [list of reactants], [list of product], rateConstant]
-def generateReactionList(nSpecies, nReactions, boundaryIdx):
+def generateReactionList(nSpecies, nReactions, realFloatingIdsIndSort, realBoundaryIdsIndSort, realConcCC):
 
     nsList = np.arange(nSpecies)
     reactionList = []
     
     for r_idx in range(nReactions):
+        posRctInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] < 0], 
+                              np.array(realBoundaryIdsIndSort)).astype(int)
+        posPrdInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] >= 0], 
+                              np.array(realBoundaryIdsIndSort)).astype(int)
+        
         rct = [col[3] for col in reactionList]
         prd = [col[4] for col in reactionList]
         
@@ -94,61 +99,61 @@ def generateReactionList(nSpecies, nReactions, boundaryIdx):
         
         if rType == ReactionType.UNIUNI:
             # UniUni
-            rct_id = np.random.choice(nsList, size=1).tolist()
-            prd_id = np.random.choice(np.delete(nsList, rct_id), size=1).tolist()
+            rct_id = np.random.choice(posRctInd, size=1).tolist()
+            prd_id = np.random.choice(posPrdInd, size=1).tolist()
             all_rct = [i for i,x in enumerate(rct) if x==rct_id]
             all_prd = [i for i,x in enumerate(prd) if x==prd_id]
             
-            while (((np.any(np.isin(rct_id, boundaryIdx))) and 
-                   (np.any(np.isin(prd_id, boundaryIdx)))) or 
+            while (((np.any(np.isin(rct_id, realBoundaryIdsIndSort))) and 
+                   (np.any(np.isin(prd_id, realBoundaryIdsIndSort)))) or 
                    (len(set(all_rct) & set(all_prd)) > 0)):
-                rct_id = np.random.choice(nsList, size=1).tolist()
-                prd_id = np.random.choice(np.delete(nsList, rct_id), size=1).tolist()
+                rct_id = np.random.choice(posRctInd, size=1).tolist()
+                prd_id = np.random.choice(posPrdInd, size=1).tolist()
                 # Search for potentially identical reactions
                 all_rct = [i for i,x in enumerate(rct) if x==rct_id]
                 all_prd = [i for i,x in enumerate(prd) if x==prd_id]
         elif rType == ReactionType.BIUNI:
             # BiUni
-            rct_id = np.random.choice(nsList, size=2, replace=True).tolist()
-            prd_id = np.random.choice(np.delete(nsList, rct_id), size=1).tolist()
+            rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
+            prd_id = np.random.choice(posPrdInd, size=1).tolist()
             all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
             all_prd = [i for i,x in enumerate(prd) if x==prd_id]
             
-            while (((np.any(np.isin(rct_id, boundaryIdx))) and 
-                   (np.any(np.isin(prd_id, boundaryIdx)))) or 
+            while (((np.any(np.isin(rct_id, realBoundaryIdsIndSort))) and 
+                   (np.any(np.isin(prd_id, realBoundaryIdsIndSort)))) or 
                    (len(set(all_rct) & set(all_prd)) > 0)):
-                rct_id = np.random.choice(nsList, size=2, replace=True).tolist()
-                prd_id = np.random.choice(np.delete(nsList, rct_id), size=1).tolist()
+                rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
+                prd_id = np.random.choice(posPrdInd, size=1).tolist()
                 # Search for potentially identical reactions
                 all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
                 all_prd = [i for i,x in enumerate(prd) if x==prd_id]
         elif rType == ReactionType.UNIBI:
             # UniBi
-            rct_id = np.random.choice(nsList, size=1).tolist()
-            prd_id = np.random.choice(np.delete(nsList, rct_id), size=2, replace=True).tolist()
+            rct_id = np.random.choice(posRctInd, size=1).tolist()
+            prd_id = np.random.choice(posPrdInd, size=2, replace=True).tolist()
             all_rct = [i for i,x in enumerate(rct) if x==rct_id]
             all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
             
-            while (((np.any(np.isin(rct_id, boundaryIdx))) and 
-                   (np.any(np.isin(prd_id, boundaryIdx)))) or 
+            while (((np.any(np.isin(rct_id, realBoundaryIdsIndSort))) and 
+                   (np.any(np.isin(prd_id, realBoundaryIdsIndSort)))) or 
                    (len(set(all_rct) & set(all_prd)) > 0)):
-                rct_id = np.random.choice(nsList, size=1).tolist()
-                prd_id = np.random.choice(np.delete(nsList, rct_id), size=2, replace=True).tolist()
+                rct_id = np.random.choice(posRctInd, size=1).tolist()
+                prd_id = np.random.choice(posPrdInd, size=2, replace=True).tolist()
                 # Search for potentially identical reactions
                 all_rct = [i for i,x in enumerate(rct) if x==rct_id]
                 all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
         else:
             # BiBi
-            rct_id = np.random.choice(nsList, size=2, replace=True).tolist()
-            prd_id = np.random.choice(np.delete(nsList, rct_id), size=2, replace=True).tolist()
+            rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
+            prd_id = np.random.choice(posPrdInd, size=2, replace=True).tolist()
             all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
             all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
             
-            while (((np.any(np.isin(rct_id, boundaryIdx))) and 
-                   (np.any(np.isin(prd_id, boundaryIdx)))) or
+            while (((np.any(np.isin(rct_id, realBoundaryIdsIndSort))) and 
+                   (np.any(np.isin(prd_id, realBoundaryIdsIndSort)))) or
                    (len(set(all_rct) & set(all_prd)) > 0)):
-                rct_id = np.random.choice(nsList, size=2, replace=True).tolist()
-                prd_id = np.random.choice(np.delete(nsList, rct_id), size=2, replace=True).tolist()
+                rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
+                prd_id = np.random.choice(posPrdInd, size=2, replace=True).tolist()
                 # Search for potentially identical reactions
                 all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
                 all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
@@ -159,8 +164,8 @@ def generateReactionList(nSpecies, nReactions, boundaryIdx):
         elif regType == RegulationType.INHIBITION:
             act_id = []
             delList = np.concatenate([rct_id, prd_id])
-            if len(boundaryIdx) > 0:
-                delList = np.unique(np.append(delList, boundaryIdx))
+            if len(realBoundaryIdsIndSort) > 0:
+                delList = np.unique(np.append(delList, realBoundaryIdsIndSort))
             cList = np.delete(nsList, delList)
             if len(cList) == 0:
                 inhib_id = []
@@ -170,8 +175,8 @@ def generateReactionList(nSpecies, nReactions, boundaryIdx):
         elif regType == RegulationType.ACTIVATION:
             inhib_id = []
             delList = np.concatenate([rct_id, prd_id])
-            if len(boundaryIdx) > 0:
-                delList = np.unique(np.append(delList, boundaryIdx))
+            if len(realBoundaryIdsIndSort) > 0:
+                delList = np.unique(np.append(delList, realBoundaryIdsIndSort))
             cList = np.delete(nsList, delList)
             if len(cList) == 0:
                 act_id = []
@@ -180,8 +185,8 @@ def generateReactionList(nSpecies, nReactions, boundaryIdx):
                 act_id = np.random.choice(cList, size=1).tolist()
         else:
             delList = np.concatenate([rct_id, prd_id])
-            if len(boundaryIdx) > 0:
-                delList = np.unique(np.append(delList, boundaryIdx))
+            if len(realBoundaryIdsIndSort) > 0:
+                delList = np.unique(np.append(delList, realBoundaryIdsIndSort))
             cList = np.delete(nsList, delList)
             if len(cList) < 2:
                 act_id = []
