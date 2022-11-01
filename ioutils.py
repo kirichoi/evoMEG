@@ -233,6 +233,57 @@ def testModels(modelType):
         S2 = 1
         S3 = 1
         """
+    elif modelType == 'Feedback_m':
+        # FFL    
+        realModel = """
+        var S1, S2, S3;
+        const S0, S4;
+        J0: S0 -> S1; Kf0*S0/(1 + S0);
+        J1: S1 -> S2; Kf1*S1/(1 + S1);
+        J2: S2 -> S3; Kf2*S2/(1 + S2);
+        J3: S3 -> S4; Kf3*S3/(1 + S3);
+        J4: S3 -> S1; Kf4*S3/(1 + S3);
+       
+        Kf0 = 0.285822003905
+        Kf1 = 0.571954691013
+        Kf2 = 0.393173236422
+        Kf3 = 0.75830845241
+        Kf4 = 0.148522702962
+       
+        S0 = 3
+        S4 = 5
+        S1 = 1
+        S2 = 1
+        S3 = 1
+        """
+    elif modelType == 'Feedback_r':
+        # FFL    
+        realModel = """
+        var S1, S2, S3;
+        const S0, S4;
+        J0: S0 -> S1; (Kf0*S0 - Kr0*S1)/(1 + S0 + S1);
+        J1: S1 -> S2; (Kf0*S1 - Kr1*S2)/(1 + S1 + S2);
+        J2: S2 -> S3; (Kf2*S2 - Kr2*S3)/(1 + S2 + S3);
+        J3: S3 -> S4; (Kf3*S3 - Kr3*S4)/(1 + S3 + S4);
+        J4: S3 -> S1; (Kf4*S3 - Kr4*S1)/(1 + S3 + S1);
+       
+        Kf0 = 0.285822003905
+        Kf1 = 0.571954691013
+        Kf2 = 0.393173236422
+        Kf3 = 0.75830845241
+        Kf4 = 0.548522702962
+        Kr0 = 0.072790656829
+        Kr1 = 0.27828563882
+        Kr2 = 0.166906190765
+        Kr3 = 0.27057924345
+        Kr4 = 0.1026847763
+       
+        S0 = 3
+        S4 = 5
+        S1 = 1
+        S2 = 1
+        S3 = 1
+        """
     elif modelType == 'FFL_m':
         # FFL    
         realModel = """
