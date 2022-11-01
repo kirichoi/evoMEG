@@ -145,7 +145,7 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind)
         o = 0
         
         while ((stt[1] != realFloatingIdsIndSort or stt[2] != realBoundaryIdsIndSort or
-                reactionList in rl_track or np.sum(stt[0]) != 0 or len(check_duplicate_reaction(stt[0])) > 0 or
+                reactionList in list(ens_rl) or np.sum(stt[0]) != 0 or len(check_duplicate_reaction(stt[0])) > 0 or
                 np.linalg.matrix_rank(stt[0]) != realNumFloating) and (o < maxIter_mut)):
             r_idx = np.random.choice(np.arange(nr), p=np.divide(tempdiff, np.sum(tempdiff)))
             
@@ -367,7 +367,7 @@ def initialize():
         stt[0][stt[0]<-1] = -1
         # Ensure no redundant model
         while (stt[1] != realFloatingIdsIndSort or stt[2] != realBoundaryIdsIndSort 
-               or rl in rl_track or np.sum(stt[0]) != 0 or np.linalg.matrix_rank(stt[0]) != realNumFloating):
+               or rl in list(ens_rl) or np.sum(stt[0]) != 0 or np.linalg.matrix_rank(stt[0]) != realNumFloating):
             rl = ng.generateReactionList(ns, nr, realFloatingIdsIndSort, realBoundaryIdsIndSort, realConcCC)
             st = ng.getFullStoichiometryMatrix(rl, ns).tolist()
             stt = ng.removeBoundaryNodes(np.array(st))
@@ -423,9 +423,14 @@ def initialize():
     return ens_dist, ens_model, ens_rl, rl_track, ens_concCC
 
 
-def random_gen(listAntStr, listDist, listrl, listconcCC):
+def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv):
     global countf
     global counts
+    
+    listAntStr = ens_model[mut_ind_inv]
+    listDist = ens_dist[mut_ind_inv]
+    listrl = ens_rl[mut_ind_inv]
+    listconcCC = ens_concCC[mut_ind_inv]
     
     rndSize = len(listDist)
     
@@ -443,7 +448,7 @@ def random_gen(listAntStr, listDist, listrl, listconcCC):
         stt[0][stt[0]<-1] = -1
         # Ensure no redundant models
         while ((stt[1] != realFloatingIdsIndSort or stt[2] != realBoundaryIdsIndSort or
-                rl in rl_track or np.sum(stt[0]) != 0 or np.linalg.matrix_rank(stt[0]) != realNumFloating) and (d < maxIter_gen)):
+                rl in list(ens_rl) or np.sum(stt[0]) != 0 or np.linalg.matrix_rank(stt[0]) != realNumFloating) and (d < maxIter_gen)):
             rl = ng.generateReactionList(ns, nr, realFloatingIdsIndSort, realBoundaryIdsIndSort, realConcCC)
             st = ng.getFullStoichiometryMatrix(rl, ns).tolist()
             stt = ng.removeBoundaryNodes(np.array(st))
@@ -530,9 +535,9 @@ if __name__ == '__main__':
     # General settings ========================================================
     
     # Number of generations
-    n_gen = 50
+    n_gen = 100
     # Size of output ensemble
-    ens_size = 20
+    ens_size = 40
     # Number of models passed on the next generation without mutation
     pass_size = int(ens_size/10)
     # Number of models to mutate
@@ -740,10 +745,11 @@ if __name__ == '__main__':
     #        if breakFlag:
     #            break
             
-            rnd_dist, rnd_model, rnd_rl, rnd_concCC = random_gen(ens_model[mut_ind_inv], 
-                                                                 ens_dist[mut_ind_inv], 
-                                                                 ens_rl[mut_ind_inv],
-                                                                 ens_concCC[mut_ind_inv])
+            rnd_dist, rnd_model, rnd_rl, rnd_concCC = random_gen(ens_model, 
+                                                                 ens_dist, 
+                                                                 ens_rl,
+                                                                 ens_concCC,
+                                                                 mut_ind_inv)
             ens_model[mut_ind_inv] = rnd_model
             ens_dist[mut_ind_inv] = rnd_dist
             ens_rl[mut_ind_inv] = rnd_rl
