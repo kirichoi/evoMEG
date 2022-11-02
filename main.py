@@ -145,7 +145,7 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind)
         o = 0
         
         while ((stt[1] != realFloatingIdsIndSort or stt[2] != realBoundaryIdsIndSort or
-                reactionList in list(ens_rl) or np.sum(stt[0]) != 0 or len(check_duplicate_reaction(stt[0])) > 0 or
+                reactionList in rl_track or np.sum(stt[0]) != 0 or len(check_duplicate_reaction(stt[0])) > 0 or
                 np.linalg.matrix_rank(stt[0]) != realNumFloating) and (o < maxIter_mut)):
             r_idx = np.random.choice(np.arange(nr), p=np.divide(tempdiff, np.sum(tempdiff)))
             
@@ -154,11 +154,23 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind)
             if np.random.random() < recomb:
                 reactionList[r_idx] = ens_rl[minrndidx][r_idx]
             else:
-                posRctInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] < 0], 
-                                      np.array(realBoundaryIdsIndSort)).astype(int)
-                posPrdInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] >= 0], 
-                                      np.array(realBoundaryIdsIndSort)).astype(int)
-                
+                ssum = np.sum(np.sign(realConcCC[:,r_idx]))
+                if ssum > 0:
+                    posRctInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] <= 0], 
+                                          np.array(realBoundaryIdsIndSort)).astype(int)
+                    posPrdInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] > 0], 
+                                          np.array(realBoundaryIdsIndSort)).astype(int)
+                elif ssum < 0:
+                    posRctInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] < 0], 
+                                          np.array(realBoundaryIdsIndSort)).astype(int)
+                    posPrdInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] >= 0], 
+                                          np.array(realBoundaryIdsIndSort)).astype(int)
+                else:
+                    posRctInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] <= 0], 
+                                          np.array(realBoundaryIdsIndSort)).astype(int)
+                    posPrdInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] >= 0], 
+                                          np.array(realBoundaryIdsIndSort)).astype(int)
+                    
                 rct = [col[3] for col in reactionList]
                 prd = [col[4] for col in reactionList]
                 
@@ -367,7 +379,7 @@ def initialize():
         stt[0][stt[0]<-1] = -1
         # Ensure no redundant model
         while (stt[1] != realFloatingIdsIndSort or stt[2] != realBoundaryIdsIndSort 
-               or rl in list(ens_rl) or np.sum(stt[0]) != 0 or np.linalg.matrix_rank(stt[0]) != realNumFloating):
+               or rl in rl_track or np.sum(stt[0]) != 0 or np.linalg.matrix_rank(stt[0]) != realNumFloating):
             rl = ng.generateReactionList(ns, nr, realFloatingIdsIndSort, realBoundaryIdsIndSort, realConcCC)
             st = ng.getFullStoichiometryMatrix(rl, ns).tolist()
             stt = ng.removeBoundaryNodes(np.array(st))
@@ -527,17 +539,17 @@ if __name__ == '__main__':
     
     # Test models =============================================================
     
-    # 'FFL_m', 'Linear_m', 'Nested_m', 'Branched_m', 'sigPath'
-    # 'FFL_r', 'Linear_r', 'Nested_r', 'Branched_r'
+    # 'FFL_m', 'Linear_m', 'Nested_m', 'Branched_m', 'Feedback_m', 'sigPath'
+    # 'FFL_r', 'Linear_r', 'Nested_r', 'Branched_r', 'Feedback_r'
     modelType = 'Branched_m'
     
     
     # General settings ========================================================
     
     # Number of generations
-    n_gen = 100
+    n_gen = 600
     # Size of output ensemble
-    ens_size = 40
+    ens_size = 100
     # Number of models passed on the next generation without mutation
     pass_size = int(ens_size/10)
     # Number of models to mutate
@@ -593,7 +605,7 @@ if __name__ == '__main__':
     # Flag for saving current settings
     EXPORT_SETTINGS = True
     # Path to save the output
-    EXPORT_PATH = './outputs/Branched_m_test_1'
+    EXPORT_PATH = './outputs/Branched_m_test_42'
     
     # Flag to run algorithm
     RUN = True
@@ -699,6 +711,7 @@ if __name__ == '__main__':
         dist_top_ind = np.argsort(ens_dist)
         dist_top = ens_dist[dist_top_ind]
         model_top = ens_model[dist_top_ind]
+        concCC_top = ens_concCC[dist_top_ind]
         
         best_dist.append(dist_top[0])
         avg_dist.append(np.average(dist_top))

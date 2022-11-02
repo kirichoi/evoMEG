@@ -87,10 +87,22 @@ def generateReactionList(nSpecies, nReactions, realFloatingIdsIndSort, realBound
     reactionList = []
     
     for r_idx in range(nReactions):
-        posRctInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] < 0], 
-                              np.array(realBoundaryIdsIndSort)).astype(int)
-        posPrdInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] >= 0], 
-                              np.array(realBoundaryIdsIndSort)).astype(int)
+        ssum = np.sum(np.sign(realConcCC[:,r_idx]))
+        if ssum > 0:
+            posRctInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] <= 0], 
+                                  np.array(realBoundaryIdsIndSort)).astype(int)
+            posPrdInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] > 0], 
+                                  np.array(realBoundaryIdsIndSort)).astype(int)
+        elif ssum < 0:
+            posRctInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] < 0], 
+                                  np.array(realBoundaryIdsIndSort)).astype(int)
+            posPrdInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] >= 0], 
+                                  np.array(realBoundaryIdsIndSort)).astype(int)
+        else:
+            posRctInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] <= 0], 
+                                  np.array(realBoundaryIdsIndSort)).astype(int)
+            posPrdInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] >= 0], 
+                                  np.array(realBoundaryIdsIndSort)).astype(int)
         
         rct = [col[3] for col in reactionList]
         prd = [col[4] for col in reactionList]
