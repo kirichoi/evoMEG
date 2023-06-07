@@ -5,7 +5,7 @@ Created on Sat May 19 16:01:19 2018
 @author: kirichoi
 """
 
-import os, sys
+import os, sys, psutil
 import tellurium as te
 import roadrunner
 import numpy as np
@@ -92,7 +92,7 @@ def f1(k_list, *args):
         objCCC = np.multiply(T4, np.divide(a, b))
         
         if np.isnan(objCCC).any():
-            dist_obj = 100000
+            dist_obj = 1e6
         else:
             objCCC[np.abs(objCCC) < 1e-8] = 0 # Set small values to zero
             
@@ -104,7 +104,7 @@ def f1(k_list, *args):
             dist_obj = ((np.linalg.norm(realConcCC - objCCC))*(1 + np.sum(np.not_equal(np.sign(np.array(realConcCC)), np.sign(np.array(objCCC))))))
     except:
         countf += 1
-        dist_obj = 100000
+        dist_obj = 1e6
         
     counts += 1
     
@@ -118,8 +118,10 @@ def callbackF(X, convergence=0.):
     return False
 
 def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind):
+
     global countf
     global counts
+    global rl_track
     
     eval_dist = np.empty(mut_size)
     eval_model = np.empty(mut_size, dtype='object')
@@ -144,7 +146,7 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind)
         
         o = 0
         
-        while ((stt[1] != realFloatingIdsIndSort or stt[2] != realBoundaryIdsIndSort or
+        while ((stt[1] != realFloatingIdsIndSortList or stt[2] != realBoundaryIdsIndSortList or
                 reactionList in rl_track or np.sum(stt[0]) != 0 or len(check_duplicate_reaction(stt[0])) > 0 or
                 np.linalg.matrix_rank(stt[0]) != realNumFloating) and (o < maxIter_mut)):
             r_idx = np.random.choice(np.arange(nr), p=np.divide(tempdiff, np.sum(tempdiff)))
@@ -156,20 +158,20 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind)
             else:
                 ssum = np.sum(np.sign(realConcCC[:,r_idx]))
                 if ssum > 0:
-                    posRctInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] <= 0], 
-                                          np.array(realBoundaryIdsIndSort)).astype(int)
-                    posPrdInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] > 0], 
-                                          np.array(realBoundaryIdsIndSort)).astype(int)
+                    posRctInd = np.append(realFloatingIdsIndSort[realConcCC[:,r_idx] <= 0], 
+                                          realBoundaryIdsIndSort)
+                    posPrdInd = np.append(realFloatingIdsIndSort[realConcCC[:,r_idx] > 0], 
+                                          realBoundaryIdsIndSort)
                 elif ssum < 0:
-                    posRctInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] < 0], 
-                                          np.array(realBoundaryIdsIndSort)).astype(int)
-                    posPrdInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] >= 0], 
-                                          np.array(realBoundaryIdsIndSort)).astype(int)
+                    posRctInd = np.append(realFloatingIdsIndSort[realConcCC[:,r_idx] < 0], 
+                                          realBoundaryIdsIndSort)
+                    posPrdInd = np.append(realFloatingIdsIndSort[realConcCC[:,r_idx] >= 0], 
+                                          realBoundaryIdsIndSort)
                 else:
-                    posRctInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] <= 0], 
-                                          np.array(realBoundaryIdsIndSort)).astype(int)
-                    posPrdInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] >= 0], 
-                                          np.array(realBoundaryIdsIndSort)).astype(int)
+                    posRctInd = np.append(realFloatingIdsIndSort[realConcCC[:,r_idx] <= 0], 
+                                          realBoundaryIdsIndSort)
+                    posPrdInd = np.append(realFloatingIdsIndSort[realConcCC[:,r_idx] >= 0], 
+                                          realBoundaryIdsIndSort)
                     
                 rct = [col[3] for col in reactionList]
                 prd = [col[4] for col in reactionList]
@@ -312,7 +314,7 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind)
                             bounds=p_bound, maxiter=optiMaxIter, tol=optiTol,
                             polish=optiPolish, seed=r_seed)
                 
-                if not res.success or res.fun == 100000:
+                if not res.success or res.fun == 1e6:
                     eval_dist[m] = mut_dist[m]
                     eval_model[m] = mut_model[m]
                     eval_rl[m] = mut_rl[m]
@@ -346,19 +348,21 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind)
                 eval_rl[m] = mut_rl[m]
                 eval_concCC[m] = mut_concCC[m]
         
-        try:
-            r.clearModel()
-        except:
-            pass
-        antimony.clearPreviousLoads()
-        antimony.freeAll()
+            try:
+                r.clearModel()
+            except:
+                pass
+            antimony.clearPreviousLoads()
+            antimony.freeAll()
 
     return eval_dist, eval_model, eval_rl, eval_concCC
 
 
 def initialize():
+
     global countf
     global counts
+    global rl_track
     
     numBadModels = 0
     numGoodModels = 0
@@ -378,7 +382,7 @@ def initialize():
         stt[0][stt[0]>1] = 1
         stt[0][stt[0]<-1] = -1
         # Ensure no redundant model
-        while (stt[1] != realFloatingIdsIndSort or stt[2] != realBoundaryIdsIndSort 
+        while (stt[1] != realFloatingIdsIndSortList or stt[2] != realBoundaryIdsIndSortList
                or rl in rl_track or np.sum(stt[0]) != 0 or np.linalg.matrix_rank(stt[0]) != realNumFloating):
             rl = ng.generateReactionList(ns, nr, realFloatingIdsIndSort, realBoundaryIdsIndSort, realConcCC)
             st = ng.getFullStoichiometryMatrix(rl, ns).tolist()
@@ -387,6 +391,7 @@ def initialize():
             stt[0][stt[0]<-1] = -1
         antStr = ng.generateAntimony(realFloatingIdsSort, realBoundaryIdsSort, stt[1],
                                       stt[2], rl, boundary_init=realBoundaryVal)
+
         try:
             r = te.loada(antStr)
             concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
@@ -396,9 +401,10 @@ def initialize():
             
             p_bound = ng.generateParameterBoundary(r.getGlobalParameterIds())
             res = scipy.optimize.differential_evolution(f1, args=(r,), 
-                               bounds=p_bound, maxiter=optiMaxIter, tol=optiTol,
-                               polish=optiPolish, seed=r_seed)
-            if not res.success or res.fun == 100000:
+                                bounds=p_bound, maxiter=optiMaxIter, tol=optiTol,
+                                polish=optiPolish, seed=r_seed)
+            
+            if not res.success or res.fun == 1e6:
                 numBadModels += 1
             else:
                 r.resetToOrigin()
@@ -436,8 +442,10 @@ def initialize():
 
 
 def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv):
+    
     global countf
     global counts
+    global rl_track
     
     listAntStr = ens_model[mut_ind_inv]
     listDist = ens_dist[mut_ind_inv]
@@ -459,7 +467,7 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv):
         stt[0][stt[0]>1] = 1
         stt[0][stt[0]<-1] = -1
         # Ensure no redundant models
-        while ((stt[1] != realFloatingIdsIndSort or stt[2] != realBoundaryIdsIndSort or
+        while ((stt[1] != realFloatingIdsIndSortList or stt[2] != realBoundaryIdsIndSortList or
                 rl in list(ens_rl) or np.sum(stt[0]) != 0 or np.linalg.matrix_rank(stt[0]) != realNumFloating) and (d < maxIter_gen)):
             rl = ng.generateReactionList(ns, nr, realFloatingIdsIndSort, realBoundaryIdsIndSort, realConcCC)
             st = ng.getFullStoichiometryMatrix(rl, ns).tolist()
@@ -468,7 +476,7 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv):
             stt[0][stt[0]<-1] = -1
             
             d += 1
-            
+        
         if d >= maxIter_gen:
             rnd_dist[l] = listDist[l]
             rnd_model[l] = listAntStr[l]
@@ -490,7 +498,7 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv):
                             polish=optiPolish, seed=r_seed)
                 
                 # Failed to find solution
-                if not res.success or res.fun == 100000 or np.isnan(concCC).any():
+                if not res.success or res.fun == 1e6 or np.isnan(concCC).any():
                     rnd_dist[l] = listDist[l]
                     rnd_model[l] = listAntStr[l]
                     rnd_rl[l] = listrl[l]
@@ -517,13 +525,13 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv):
                 rnd_rl[l] = listrl[l]
                 rnd_concCC[l] = listconcCC[l]
         
-        try:
-            r.clearModel()
-        except:
-            pass        
-        antimony.clearPreviousLoads()
-        antimony.freeAll()
-        
+            try:
+                r.clearModel()
+            except:
+                pass        
+            antimony.clearPreviousLoads()
+            antimony.freeAll()
+            
     return rnd_dist, rnd_model, rnd_rl, rnd_concCC
 
 # TODO: simulated annealing (multiply to fitness for rate constants)
@@ -541,15 +549,15 @@ if __name__ == '__main__':
     
     # 'FFL_m', 'Linear_m', 'Nested_m', 'Branched_m', 'Feedback_m', 'sigPath'
     # 'FFL_r', 'Linear_r', 'Nested_r', 'Branched_r', 'Feedback_r'
-    modelType = 'Branched_m'
+    modelType = 'FFL_m'
     
     
     # General settings ========================================================
     
     # Number of generations
-    n_gen = 600
+    n_gen = 50
     # Size of output ensemble
-    ens_size = 100
+    ens_size = 50
     # Number of models passed on the next generation without mutation
     pass_size = int(ens_size/10)
     # Number of models to mutate
@@ -583,29 +591,29 @@ if __name__ == '__main__':
     # Flag for adding Gaussian noise to steady-state and control coefficiant values
     NOISE = False
     # Standard deviation of Gaussian noise
-    ABS_NOISE_STD = 0.005
+    ABS_NOISE_STD = 0.005   
     # Standard deviation of Gaussian noise
-    REL_NOISE_STD = 0.05
+    REL_NOISE_STD = 0.2
     
     
     # Plotting settings =======================================================
     
     # Flag for plots
-    PLOT = True
+    SHOW_PLOT = False
     # Flag for saving plots
-    SAVE_PLOT = True
+    SAVE_PLOT = False
     
     
     # Data settings ===========================================================
-    
+        
     # Flag for collecting all models in the ensemble
-    EXPORT_ALL_MODELS = True
+    EXPORT_ALL_MODELS = False
     # Flag for saving collected models
-    EXPORT_OUTPUT = True
+    EXPORT_OUTPUT = False
     # Flag for saving current settings
-    EXPORT_SETTINGS = True
+    EXPORT_SETTINGS = False
     # Path to save the output
-    EXPORT_PATH = './outputs/Branched_m_test_42'
+    EXPORT_PATH = './outputs_new/FFL_m_noise_test_3'
     
     # Flag to run algorithm
     RUN = True
@@ -618,6 +626,9 @@ if __name__ == '__main__':
     # roadrunner.Config.setValue(roadrunner.Config.STEADYSTATE_APPROX_MAX_STEPS, 5)
     # roadrunner.Config.setValue(roadrunner.Config.STEADYSTATE_APPROX_TIME, 10000)
 #    roadrunner.Config.setValue(roadrunner.Config.STEADYSTATE_APPROX_TOL, 1e-3)
+    # roadrunner.Config.setValue(roadrunner.Config.ROADRUNNER_DISABLE_PYTHON_DYNAMIC_PROPERTIES, 1)
+    roadrunner.Config.setValue(roadrunner.Config.PYTHON_ENABLE_NAMED_MATRIX, 0)
+    # roadrunner.Config.setValue(roadrunner.Config.MAX_OUTPUT_ROWS, 5)
         
     # Using one of the test models
     realModel = ioutils.testModels(modelType)
@@ -630,13 +641,15 @@ if __name__ == '__main__':
     realNumBoundary = realRR.getNumBoundarySpecies()
     realNumFloating = realRR.getNumFloatingSpecies()
     realFloatingIds = realRR.getFloatingSpeciesIds()
-    realFloatingIdsSort = list(np.sort(realFloatingIds))
-    realFloatingIdsInd = list(map(int, [s.strip('S') for s in realFloatingIds]))
-    realFloatingIdsIndSort = list(np.sort(realFloatingIdsInd))
+    realFloatingIdsSort = np.sort(realFloatingIds)
+    realFloatingIdsInd = np.fromiter(map(int, [s.strip('S') for s in realFloatingIds]), dtype=int)
+    realFloatingIdsIndSort = np.sort(realFloatingIdsInd)
+    realFloatingIdsIndSortList = list(realFloatingIdsIndSort)
     realBoundaryIds = realRR.getBoundarySpeciesIds()
-    realBoundaryIdsSort = list(np.sort(realBoundaryIds))
-    realBoundaryIdsInd = list(map(int,[s.strip('S') for s in realBoundaryIds]))
-    realBoundaryIdsIndSort = list(np.sort(realBoundaryIdsInd))
+    realBoundaryIdsSort = np.sort(realBoundaryIds)
+    realBoundaryIdsInd = np.fromiter(map(int, [s.strip('S') for s in realBoundaryIds]), dtype=int)
+    realBoundaryIdsIndSort = np.sort(realBoundaryIdsInd)
+    realBoundaryIdsIndSortList = list(realBoundaryIdsIndSort)
     realBoundaryVal = realRR.getBoundarySpeciesConcentrations()
     realReactionIds = realRR.getReactionIds()
     realGlobalParameterIds = realRR.getGlobalParameterIds()
@@ -695,7 +708,11 @@ if __name__ == '__main__':
         print("Control Coefficients with Noise Added")
         print(realConcCC)
     
+    memory = []
+    
     if RUN:
+        process = psutil.Process()
+        
         # Initualize Lists
         best_dist = []
         avg_dist = []
@@ -705,8 +722,12 @@ if __name__ == '__main__':
         # Start Timing
         t1 = time.time()
         
+        memory.append(process.memory_info().rss)
+        
         # Initialize
         ens_dist, ens_model, ens_rl, rl_track, ens_concCC = initialize()
+        
+        memory.append(process.memory_info().rss)
         
         dist_top_ind = np.argsort(ens_dist)
         dist_top = ens_dist[dist_top_ind]
@@ -729,9 +750,16 @@ if __name__ == '__main__':
             minind = np.argsort(ens_dist)[:pass_size]
             tarind = np.delete(np.arange(ens_size), minind)
             mut_p = 1/ens_dist[tarind]/np.sum(1/ens_dist[tarind])
-            mut_ind = np.random.choice(tarind, size=mut_size-pass_size, 
-                                               replace=False, p=mut_p)
+            mut_ind = np.random.choice(tarind, size=mut_size-pass_size, replace=False, p=mut_p)
             mut_ind = np.append(mut_ind, minind)
+            
+            g1 = np.random.choice(np.arange(ens_size), size=int(ens_size/2), replace=False)
+            g2 = np.delete(np.arange(ens_size), g1)
+            
+            fitg1 = g1[ens_dist[g1] <= ens_dist[g2]]
+            fitg2 = g2[ens_dist[g1] > ens_dist[g2]]
+            
+            mut_ind = np.append(fitg1, fitg2)
             mut_ind_inv = np.setdiff1d(np.arange(ens_size), mut_ind)
             
             evol_dist, evol_model, evol_rl, evol_concCC = mutate_and_evaluate(ens_model, 
@@ -782,6 +810,8 @@ if __name__ == '__main__':
             print("Top 5 distance: " + str(top5_dist[-1]))
             print("Average distance: " + str(avg_dist[-1]))
             
+            memory.append(process.memory_info().rss)
+            
     #        for tt in range(len(mut_ind_inv)):
     #            r = te.loada(ens_model[mut_ind_inv[tt]])
     #            try:
@@ -814,11 +844,11 @@ if __name__ == '__main__':
             
     #%%
         EXPORT_PATH = os.path.abspath(os.path.join(os.getcwd(), EXPORT_PATH))
-        if PLOT or EXPORT_SETTINGS or EXPORT_OUTPUT:
+        if SAVE_PLOT or EXPORT_SETTINGS or EXPORT_OUTPUT or EXPORT_ALL_MODELS:
             if not os.path.exists(EXPORT_PATH):
                 os.makedirs(EXPORT_PATH)
         
-        if PLOT:
+        if SHOW_PLOT:
             # Convergence
             if SAVE_PLOT:
                 if not os.path.exists(EXPORT_PATH):
@@ -834,19 +864,19 @@ if __name__ == '__main__':
             # TODO: Add polishing with fast optimizer 
             
             # Average residual
-            if SAVE_PLOT:
-                pt.plotResidual(realModel, ens_model, ens_dist, 
-                                SAVE_PATH=os.path.join(EXPORT_PATH, 'images/average_residual.pdf'))
-            else:
-                pt.plotResidual(realModel, ens_model, ens_dist)
+            # if SAVE_PLOT:
+            #     pt.plotResidual(realModel, ens_model, ens_dist, 
+            #                     SAVE_PATH=os.path.join(EXPORT_PATH, 'images/average_residual.pdf'))
+            # else:
+            #     pt.plotResidual(realModel, ens_model, ens_dist)
                 
-            # Distance histogram with KDE
-            if SAVE_PLOT:
-                pt.plotDistanceHistogramWithKDE(kde_xarr, dist_top, log_dens, minInd, 
-                                                SAVE_PATH=os.path.join(EXPORT_PATH, 
-                                                                       'images/distance_hist_w_KDE.pdf'))
-            else:
-                pt.plotDistanceHistogramWithKDE(kde_xarr, dist_top, log_dens, minInd)
+            # # Distance histogram with KDE
+            # if SAVE_PLOT:
+            #     pt.plotDistanceHistogramWithKDE(kde_xarr, dist_top, log_dens, minInd, 
+            #                                     SAVE_PATH=os.path.join(EXPORT_PATH, 
+            #                                                            'images/distance_hist_w_KDE.pdf'))
+            # else:
+            #     pt.plotDistanceHistogramWithKDE(kde_xarr, dist_top, log_dens, minInd)
                 
             # RMSE histogram
 #            r_real = te.loada(realModel)
@@ -892,7 +922,10 @@ if __name__ == '__main__':
             settings['optiTol'] = optiTol
             settings['optiPolish'] = optiPolish
             settings['r_seed'] = r_seed
-            
+            settings['noise'] = NOISE
+            settings['abs_noise'] = ABS_NOISE_STD
+            settings['rel_noise'] = REL_NOISE_STD
+
             if EXPORT_SETTINGS:
                 ioutils.exportSettings(settings, path=EXPORT_PATH)
             
