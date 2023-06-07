@@ -32,6 +32,9 @@ def exportSettings(settings, path=None):
     outputtxt.writelines('optiTol, '+str(settings['optiTol']) + '\n')
     outputtxt.writelines('optiPolish, '+str(settings['optiPolish']) + '\n')
     outputtxt.writelines('r_seed, '+str(settings['r_seed']) + '\n')
+    outputtxt.writelines('noise, '+str(settings['noise']) + '\n')
+    outputtxt.writelines('abs_noise, '+str(settings['abs_noise']) + '\n')
+    outputtxt.writelines('rel_noise, '+str(settings['rel_noise']) + '\n')
     outputtxt.close()
     
     
