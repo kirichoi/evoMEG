@@ -151,7 +151,7 @@ def plotNetwork(path, scale=1.5):
     net.draw()
 
 
-def plotMemory(memory, SAVE_PATH=None):
+def plotMemoryUsage(memory, SAVE_PATH=None):
     """
     Plot memory usage
 

@@ -599,7 +599,7 @@ if __name__ == '__main__':
     # Plotting settings =======================================================
     
     # Flag for plots
-    SHOW_PLOT = False
+    SHOW_PLOT = True
     # Flag for saving plots
     SAVE_PLOT = False
     
