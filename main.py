@@ -858,9 +858,12 @@ if __name__ == '__main__':
                 pt.plotAllProgress([best_dist, avg_dist, med_dist, top5_dist], 
                                    labels=['Best', 'Avg', 'Median', 'Top 5 percent'],
                                    SAVE_PATH=os.path.join(EXPORT_PATH, 'images/AllConvergences.pdf'))
+                pt.plotMemoryUsage(memory, SAVE_PATH=os.path.join(EXPORT_PATH, 'images/memoryUsage.pdf'))
             else:
                 pt.plotAllProgress([best_dist, avg_dist, med_dist, top5_dist], 
                                    labels=['Best', 'Avg', 'Median', 'Top 5 percent'])
+                pt.plotMemoryUsage(memory)
+                
             # TODO: Add polishing with fast optimizer 
             
             # Average residual

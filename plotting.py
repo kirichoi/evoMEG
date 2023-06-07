@@ -19,7 +19,7 @@ def plotAllProgress(listOfDistances, labels=None, SAVE_PATH=None):
     
     :param listOfDistances: 2D array of distances
     :param labels: list of strings to use as labels
-    :param SAVE: flag for saving the output
+    :param SAVE_PATH: path to save the plot
     """
     
     for i in range(len(listOfDistances)):
@@ -43,7 +43,7 @@ def plotProgress(distance, SAVE_PATH=None):
     
     :param distance: array of distances
     :param model_type: reference model type, e.g. 'FFL', 'Linear', etc.
-    :param SAVE: flag for saving the output
+    :param SAVE_PATH: path to save the plot
     """
     
     plt.plot(distance)
@@ -66,7 +66,7 @@ def plotResidual(realModel, ens_model, ens_dist, SAVE_PATH=None):
     :param ens_model: model ensemble
     :param ens_dist: model distances
     :param model_typ: reference model type
-    :param SAVE: flag for saving the output
+    :param SAVE_PATH: path to save the plot
     """
     
     r_real = te.loada(realModel)
@@ -150,6 +150,27 @@ def plotNetwork(path, scale=1.5):
     net.scale = scale
     net.draw()
 
+
+def plotMemory(memory, SAVE_PATH=None):
+    """
+    Plot memory usage
+
+    :param memory: list of used memory
+    :param SAVE_PATH: path to save the plot
+    """
+    
+    fig = plt.figure(figsize=(6,4))
+    plt.plot(np.divide(np.subtract(memory, memory[0]), 1e6)[1:])
+    plt.xlabel("Generation", fontsize=15)
+    plt.ylabel("Approx. Memory usage (MB)", fontsize=15)
+    plt.xticks(fontsize=15)
+    plt.yticks(fontsize=15)
+    if SAVE_PATH is not None:
+        if os.path.splitext(SAVE_PATH)[1] == '':
+            plt.savefig(os.path.join(SAVE_PATH, 'images/memoryUsage.pdf'), bbox_inches='tight')
+        else:
+            plt.savefig(SAVE_PATH, bbox_inches='tight')
+    plt.show()
 
 def plotNetworkEnsemble(path, index=None, threshold=0., scale=1.5):
     """
