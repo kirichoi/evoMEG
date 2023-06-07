@@ -87,22 +87,45 @@ def generateReactionList(nSpecies, nReactions, realFloatingIdsIndSort, realBound
     reactionList = []
     
     for r_idx in range(nReactions):
-        ssum = np.sum(np.sign(realConcCC[:,r_idx]))
+        tarval = realConcCC[:,r_idx]
+        ssum = np.sum(np.sign(tarval))
         if ssum > 0:
-            posRctInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] <= 0], 
-                                  np.array(realBoundaryIdsIndSort)).astype(int)
-            posPrdInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] > 0], 
-                                  np.array(realBoundaryIdsIndSort)).astype(int)
+            posRctInd = np.append(realFloatingIdsIndSort[tarval <= 0], 
+                                  realBoundaryIdsIndSort)
+            posRctProb = np.ones(len(posRctInd))/len(posRctInd)
+            if np.sum(tarval > 0) == len(realFloatingIdsIndSort):
+                posPrdInd = realFloatingIdsIndSort[tarval > 0]
+                posPrdProb = tarval/np.sum(tarval)
+            else:
+                posPrdInd = np.append(realFloatingIdsIndSort[tarval > 0], 
+                                      realBoundaryIdsIndSort)
+                a = np.sum(tarval[tarval > 0])*((len(tarval[tarval > 0]))
+                                                +len(realBoundaryIdsIndSort))/len(tarval[tarval > 0])
+                posPrdProb = np.append(tarval[tarval > 0]/a, 
+                                       np.repeat(1/(len(realBoundaryIdsIndSort)+len(tarval[tarval > 0])), 
+                                                 len(realBoundaryIdsIndSort)))
         elif ssum < 0:
-            posRctInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] < 0], 
-                                  np.array(realBoundaryIdsIndSort)).astype(int)
-            posPrdInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] >= 0], 
-                                  np.array(realBoundaryIdsIndSort)).astype(int)
+            if np.sum(tarval < 0) == len(realFloatingIdsIndSort):
+                posRctInd = realFloatingIdsIndSort[tarval < 0]
+                posRctProb = tarval/np.sum(tarval)
+            else:
+                posRctInd = np.append(realFloatingIdsIndSort[tarval < 0], 
+                                      realBoundaryIdsIndSort)
+                a = np.sum(tarval[tarval < 0])*((len(tarval[tarval < 0]))
+                                                +len(realBoundaryIdsIndSort))/len(tarval[tarval < 0])
+                posRctProb = np.append(tarval[tarval < 0]/a, 
+                                       np.repeat(1/(len(realBoundaryIdsIndSort)+len(tarval[tarval < 0])), 
+                                                 len(realBoundaryIdsIndSort)))
+            posPrdInd = np.append(realFloatingIdsIndSort[tarval >= 0], 
+                                  realBoundaryIdsIndSort)
+            posPrdProb = np.ones(len(posPrdInd))/len(posPrdInd)
         else:
-            posRctInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] <= 0], 
-                                  np.array(realBoundaryIdsIndSort)).astype(int)
-            posPrdInd = np.append(np.array(realFloatingIdsIndSort)[realConcCC[:,r_idx] >= 0], 
-                                  np.array(realBoundaryIdsIndSort)).astype(int)
+            posRctInd = np.append(realFloatingIdsIndSort[tarval <= 0], 
+                                  realBoundaryIdsIndSort)
+            posPrdInd = np.append(realFloatingIdsIndSort[tarval >= 0], 
+                                  realBoundaryIdsIndSort)
+            posRctProb = np.ones(len(posRctInd))/len(posRctInd)
+            posPrdProb = np.ones(len(posPrdInd))/len(posPrdInd)
         
         rct = [col[3] for col in reactionList]
         prd = [col[4] for col in reactionList]
@@ -111,61 +134,61 @@ def generateReactionList(nSpecies, nReactions, realFloatingIdsIndSort, realBound
         
         if rType == ReactionType.UNIUNI:
             # UniUni
-            rct_id = np.random.choice(posRctInd, size=1).tolist()
-            prd_id = np.random.choice(posPrdInd, size=1).tolist()
+            rct_id = np.random.choice(posRctInd, size=1, p=posRctProb).tolist()
+            prd_id = np.random.choice(posPrdInd, size=1, p=posPrdProb).tolist()
             all_rct = [i for i,x in enumerate(rct) if x==rct_id]
             all_prd = [i for i,x in enumerate(prd) if x==prd_id]
             
             while (((np.any(np.isin(rct_id, realBoundaryIdsIndSort))) and 
                    (np.any(np.isin(prd_id, realBoundaryIdsIndSort)))) or 
                    (len(set(all_rct) & set(all_prd)) > 0)):
-                rct_id = np.random.choice(posRctInd, size=1).tolist()
-                prd_id = np.random.choice(posPrdInd, size=1).tolist()
+                rct_id = np.random.choice(posRctInd, size=1, p=posRctProb).tolist()
+                prd_id = np.random.choice(posPrdInd, size=1, p=posPrdProb).tolist()
                 # Search for potentially identical reactions
                 all_rct = [i for i,x in enumerate(rct) if x==rct_id]
                 all_prd = [i for i,x in enumerate(prd) if x==prd_id]
         elif rType == ReactionType.BIUNI:
             # BiUni
-            rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
-            prd_id = np.random.choice(posPrdInd, size=1).tolist()
+            rct_id = np.random.choice(posRctInd, size=2, replace=True, p=posRctProb).tolist()
+            prd_id = np.random.choice(posPrdInd, size=1, p=posPrdProb).tolist()
             all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
             all_prd = [i for i,x in enumerate(prd) if x==prd_id]
             
             while (((np.any(np.isin(rct_id, realBoundaryIdsIndSort))) and 
                    (np.any(np.isin(prd_id, realBoundaryIdsIndSort)))) or 
                    (len(set(all_rct) & set(all_prd)) > 0)):
-                rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
-                prd_id = np.random.choice(posPrdInd, size=1).tolist()
+                rct_id = np.random.choice(posRctInd, size=2, replace=True, p=posRctProb).tolist()
+                prd_id = np.random.choice(posPrdInd, size=1, p=posPrdProb).tolist()
                 # Search for potentially identical reactions
                 all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
                 all_prd = [i for i,x in enumerate(prd) if x==prd_id]
         elif rType == ReactionType.UNIBI:
             # UniBi
-            rct_id = np.random.choice(posRctInd, size=1).tolist()
-            prd_id = np.random.choice(posPrdInd, size=2, replace=True).tolist()
+            rct_id = np.random.choice(posRctInd, size=1, p=posRctProb).tolist()
+            prd_id = np.random.choice(posPrdInd, size=2, replace=True, p=posPrdProb).tolist()
             all_rct = [i for i,x in enumerate(rct) if x==rct_id]
             all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
             
             while (((np.any(np.isin(rct_id, realBoundaryIdsIndSort))) and 
                    (np.any(np.isin(prd_id, realBoundaryIdsIndSort)))) or 
                    (len(set(all_rct) & set(all_prd)) > 0)):
-                rct_id = np.random.choice(posRctInd, size=1).tolist()
-                prd_id = np.random.choice(posPrdInd, size=2, replace=True).tolist()
+                rct_id = np.random.choice(posRctInd, size=1, p=posRctProb).tolist()
+                prd_id = np.random.choice(posPrdInd, size=2, replace=True, p=posPrdProb).tolist()
                 # Search for potentially identical reactions
                 all_rct = [i for i,x in enumerate(rct) if x==rct_id]
                 all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
         else:
             # BiBi
-            rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
-            prd_id = np.random.choice(posPrdInd, size=2, replace=True).tolist()
+            rct_id = np.random.choice(posRctInd, size=2, replace=True, p=posRctProb).tolist()
+            prd_id = np.random.choice(posPrdInd, size=2, replace=True, p=posPrdProb).tolist()
             all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
             all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
             
             while (((np.any(np.isin(rct_id, realBoundaryIdsIndSort))) and 
                    (np.any(np.isin(prd_id, realBoundaryIdsIndSort)))) or
                    (len(set(all_rct) & set(all_prd)) > 0)):
-                rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
-                prd_id = np.random.choice(posPrdInd, size=2, replace=True).tolist()
+                rct_id = np.random.choice(posRctInd, size=2, replace=True, p=posRctProb).tolist()
+                prd_id = np.random.choice(posPrdInd, size=2, replace=True, p=posPrdProb).tolist()
                 # Search for potentially identical reactions
                 all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
                 all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
@@ -289,17 +312,17 @@ def removeBoundaryNodes(st):
                 plusCoeff = plusCoeff + 1
         if plusCoeff == 0 and minusCoeff == 0:
             # No reaction attached to this species
-            orphanSpecies.append (r)
+            orphanSpecies.append(r)
         elif plusCoeff == 0 and minusCoeff != 0:
             # Species is a source
-            indexes.append (r)
+            indexes.append(r)
             countBoundarySpecies = countBoundarySpecies + 1
         elif minusCoeff == 0 and plusCoeff != 0:
             # Species is a sink
-            indexes.append (r)
+            indexes.append(r)
             countBoundarySpecies = countBoundarySpecies + 1
 
-    floatingIds = np.delete(speciesIds, indexes+orphanSpecies, axis=0).astype('int')
+    floatingIds = np.delete(speciesIds, indexes+orphanSpecies, axis=0).astype(int)
     floatingIds = floatingIds.tolist()
 
     boundaryIds = indexes
@@ -373,7 +396,7 @@ def generateRateLaw(rl, floatingIds, boundaryIds, rlt, Jind):
     return rateLaw, Klist
 
 
-def generateSimpleRateLaw(rl, floatingIds, boundaryIds, Jind):
+def generateSimpleRateLaw(rl, Jind):
     
     Klist = []
     
@@ -449,13 +472,13 @@ def generateAntimony(floatingIds, boundaryIds, stt1, stt2, reactionList, boundar
     
     # List species
     antStr = ''
-    if len (floatingIds) > 0:
+    if len(floatingIds) > 0:
         antStr = antStr + 'var ' + str(floatingIds[0])
         for index in floatingIds[1:]:
             antStr = antStr + ', ' + str(index)
         antStr = antStr + ';\n'
     
-    if len (boundaryIds) > 0:
+    if len(boundaryIds) > 0:
         antStr = antStr + 'const ' + str(boundaryIds[0])
         for index in boundaryIds[1:]:
             antStr = antStr + ', ' + str(index)
@@ -469,7 +492,7 @@ def generateAntimony(floatingIds, boundaryIds, stt1, stt2, reactionList, boundar
             antStr = antStr + ' -> '
             antStr = antStr + 'S' + str(real[tar.index(reactionListCopy[index][4][0])])
             antStr = antStr + '; '
-            RateLaw, klist_i = generateSimpleRateLaw(reactionList, floatingIds, boundaryIds, index)
+            RateLaw, klist_i = generateSimpleRateLaw(reactionList, index)
             antStr = antStr + RateLaw
             Klist.append(klist_i)
         elif rind[0] == ReactionType.BIUNI:
@@ -480,7 +503,7 @@ def generateAntimony(floatingIds, boundaryIds, stt1, stt2, reactionList, boundar
             antStr = antStr + ' -> '
             antStr = antStr + 'S' + str(real[tar.index(reactionListCopy[index][4][0])])
             antStr = antStr + '; '
-            RateLaw, klist_i = generateSimpleRateLaw(reactionList, floatingIds, boundaryIds, index)
+            RateLaw, klist_i = generateSimpleRateLaw(reactionList, index)
             antStr = antStr + RateLaw
             Klist.append(klist_i)
         elif rind[0] == ReactionType.UNIBI:
@@ -491,7 +514,7 @@ def generateAntimony(floatingIds, boundaryIds, stt1, stt2, reactionList, boundar
             antStr = antStr + ' + '
             antStr = antStr + 'S' + str(real[tar.index(reactionListCopy[index][4][1])])
             antStr = antStr + '; '
-            RateLaw, klist_i = generateSimpleRateLaw(reactionList, floatingIds, boundaryIds, index)
+            RateLaw, klist_i = generateSimpleRateLaw(reactionList, index)
             antStr = antStr + RateLaw
             Klist.append(klist_i)
         else:
@@ -504,7 +527,7 @@ def generateAntimony(floatingIds, boundaryIds, stt1, stt2, reactionList, boundar
             antStr = antStr + ' + '
             antStr = antStr + 'S' + str(real[tar.index(reactionListCopy[index][4][1])])
             antStr = antStr + '; '
-            RateLaw, klist_i = generateSimpleRateLaw(reactionList, floatingIds, boundaryIds, index)
+            RateLaw, klist_i = generateSimpleRateLaw(reactionList, index)
             antStr = antStr + RateLaw
             Klist.append(klist_i)
         antStr = antStr + ';\n'
