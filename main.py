@@ -613,9 +613,9 @@ if __name__ == '__main__':
         # Settings to control termination criterion
         
         # Maximum number of generations
-        n_gen = 50
+        n_gen = None
         # Number of generations w/o improvement
-        gen_static = None
+        gen_static = 10
         # Threshold average distance
         thres_avg = None
         # Threshold median distance
@@ -898,12 +898,13 @@ if __name__ == '__main__':
         #%%
         # Collect models
         
-        minInd, log_dens, kde_xarr, kde_idx = analysis.selectWithKernalDensity(model_top, 
-                                                                               dist_top, 
-                                                                               export_flag=Settings.EXPORT_ALL_MODELS)
-
-        model_col = model_top[:kde_idx]
-        dist_col = dist_top[:kde_idx]
+        if Settings.EXPORT_ALL_MODELS:
+            model_col = model_top
+            dist_col = dist_top
+        else:
+            kdeOutput = analysis.selectWithKernalDensity(model_top, dist_top)
+            model_col = model_top[:kdeOutput[0][0]]
+            dist_col = dist_top[:kdeOutput[0][0]]
         
             
     #%%
@@ -923,57 +924,16 @@ if __name__ == '__main__':
                                    labels=['Best', 'Avg', 'Median', 'Top {} percent'.format(int(Settings.top_p*100))],
                                    SAVE_PATH=os.path.join(Settings.EXPORT_PATH, 'images/AllConvergences.pdf'))
                 pt.plotMemoryUsage(memory, SAVE_PATH=os.path.join(Settings.EXPORT_PATH, 'images/memoryUsage.pdf'))
+                pt.plotDistanceHistogramWithKDE(kdeOutput, dist_top, 
+                                                SAVE_PATH=os.path.join(Settings.EXPORT_PATH, 'images/distance_hist_w_KDE.pdf'))
             else:
                 pt.plotAllProgress([best_dist, avg_dist, med_dist, top_dist], 
                                    labels=['Best', 'Avg', 'Median', 'Top {} percent'.format(int(Settings.top_p*100))])
                 pt.plotMemoryUsage(memory)
+                pt.plotDistanceHistogramWithKDE(kdeOutput, dist_top)
                 
             # TODO: Add polishing with fast optimizer 
-            
-            # Average residual
-            # if SAVE_PLOT:
-            #     pt.plotResidual(realModel, ens_model, ens_dist, 
-            #                     SAVE_PATH=os.path.join(EXPORT_PATH, 'images/average_residual.pdf'))
-            # else:
-            #     pt.plotResidual(realModel, ens_model, ens_dist)
                 
-            # # Distance histogram with KDE
-            # if SAVE_PLOT:
-            #     pt.plotDistanceHistogramWithKDE(kde_xarr, dist_top, log_dens, minInd, 
-            #                                     SAVE_PATH=os.path.join(EXPORT_PATH, 
-            #                                                            'images/distance_hist_w_KDE.pdf'))
-            # else:
-            #     pt.plotDistanceHistogramWithKDE(kde_xarr, dist_top, log_dens, minInd)
-                
-            # RMSE histogram
-            # r_real = te.loada(realModel)
-            # k_real = r_real.getGlobalParameterValues()
-            
-            # top_result_k = []
-            # top_diff_k = []
-            
-            # for i in ens_range:
-            #     r = te.loada(ens_model[np.argsort(ens_dist)[i]])
-            #     top_k = r.getGlobalParameterValues()
-            #     top_result_k.append(top_k)
-            #     try:
-            #         top_diff_k.append(np.sqrt(np.divide(np.sum(np.square(np.subtract(
-            #                 k_real, top_k))),len(k_real))))
-            #     except:
-            #         top_diff_k.append(np.sqrt(np.divide(np.sum(np.square(np.subtract(
-            #                 k_real, top_k[1:]))),len(k_real))))
-            
-            # krmse = top_diff_k[:pass_size]
-            
-            # plt.hist(krmse, bins=15, density=True)
-            # plt.xlabel("RMSE", fontsize=15)
-            # plt.ylabel("Normalized Frequency", fontsize=15)
-            # plt.xticks(fontsize=15)
-            # plt.yticks(fontsize=15)
-            # if SAVE_PLOT:
-            #     plt.savefig(os.path.join(EXPORT_PATH, 'images/parameter_rmse_.pdf'), bbox_inches='tight')
-            # plt.show()
-            
     #%%
         if Settings.EXPORT_SETTINGS or Settings.EXPORT_OUTPUT:
             if Settings.EXPORT_SETTINGS:

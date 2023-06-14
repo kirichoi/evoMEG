@@ -118,13 +118,14 @@ def plotDistanceHistogram(ens_dist, nbin=25, SAVE_PATH=None):
             plt.savefig(SAVE_PATH, bbox_inches='tight')
     plt.show()
 
-def plotDistanceHistogramWithKDE(kde_xarr, dist_top, log_dens, minInd, nbin=40, SAVE_PATH=None):
+def plotDistanceHistogramWithKDE(kdeOutput, dist_top, nbin=40, SAVE_PATH=None):
     """
     """
     
     hist = plt.hist(dist_top, bins=nbin, density=True)
-    plt.vlines(dist_top[minInd[0][0]-1], 0, np.max(hist[0]), linestyles='dashed')
-    plt.plot(kde_xarr, np.exp(log_dens), color='tab:red')
+    plt.vlines(dist_top[kdeOutput[0][0]-1], 0, np.max(hist[0]), 
+               linestyles='dashed', color='tab:green')
+    plt.plot(kdeOutput[2], np.exp(kdeOutput[1]), color='tab:red')
     plt.xlabel("Distance", fontsize=15)
     plt.ylabel("Normalized Frequency", fontsize=15)
     plt.xticks(fontsize=15)
