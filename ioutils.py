@@ -12,6 +12,9 @@ import pandas as pd
 def exportSettings(Settings, path=None):
     """
     Export all settings to a specified path
+    
+    :param Settings: Settings class
+    :param path: path to export settings
     """
     
     if path:
@@ -47,7 +50,8 @@ def exportSettings(Settings, path=None):
 def exportOutputs(models, dists, dist_list, Settings, time, rl_track, n, path=None):
     """
     Export all outputs to a specified path
-    
+        
+    :param path: path to export outputs
     """
     
     if path:

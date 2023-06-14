@@ -602,6 +602,9 @@ def generateLinearChainAnt(ns):
 
 def generateReactionListFromAntimony(antStr):
     """
+    Generate reaction list from a model encoded in Antimony
+    
+    :param antStr: model encoded in Antimony
     """
     import libsbml
     import sympy
@@ -749,12 +752,7 @@ def generateReactionListFromAntimony(antStr):
         else:
             revType = 0
 
-        reactionList.append([rType, 
-                             regType, 
-                             revType, 
-                             rct_temp, 
-                             prd_temp,
-                             activ,
+        reactionList.append([rType, regType, revType, rct_temp, prd_temp, activ,
                              inhib])
     
     return reactionList

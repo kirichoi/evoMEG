@@ -15,9 +15,9 @@ import seaborn as sb
 
 def plotAllProgress(listOfDistances, labels=None, SAVE_PATH=None):
     """
-    Plots multiple convergence progress 
+    Plots multiple distance progressions 
     
-    :param listOfDistances: 2D array of distances
+    :param listOfDistances: 2D array of recorded distances
     :param labels: list of strings to use as labels
     :param SAVE_PATH: path to save the plot
     """
@@ -39,9 +39,9 @@ def plotAllProgress(listOfDistances, labels=None, SAVE_PATH=None):
 
 def plotProgress(distance, SAVE_PATH=None):
     """
-    Plots convergence progress
+    Plots a distance progression
     
-    :param distance: array of distances
+    :param distance: array of recorded distances
     :param model_type: reference model type, e.g. 'FFL', 'Linear', etc.
     :param SAVE_PATH: path to save the plot
     """
@@ -97,10 +97,6 @@ def plotResidual(realModel, ens_model, ens_dist, SAVE_PATH=None):
         else:
             plt.savefig(SAVE_PATH, bbox_inches='tight')
     plt.show()
-    
-def plotHistogram():
-    """
-    """
     
 def plotDistanceHistogram(ens_dist, nbin=25, SAVE_PATH=None):
     """

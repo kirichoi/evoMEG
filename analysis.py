@@ -101,7 +101,7 @@ def ensembleTimeCourse(model_col):
 
 def isConnected(rl):
     """
-    Check if a reaction list features connected graph.
+    Check if a reaction list is equivalent to a connected graph.
     
     :param rl: reaction list
     """
@@ -162,10 +162,6 @@ def selectWithKernalDensity(model_top, dist_top):
     
     if len(minInd[0]) == 0:
         minInd = [[len(model_top)]]
-        # minInd = np.array([len(model_top) - 1])
-    # else:
-    #     minInd = [len(model_top)]
-    # kde_idx = len(model_top)
     
     return minInd[0], log_dens, kde_xarr.flatten()
 

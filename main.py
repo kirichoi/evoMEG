@@ -799,9 +799,10 @@ if __name__ == '__main__':
         
         ens_idx = np.arange(Settings.ens_size)
         
-#        breakFlag = False
+        # breakFlag = False
         
         # TODO: Remove for loop
+        # TODO: Add polishing with fast optimizer 
         while not terminate:
             minind = np.argsort(ens_dist)[:Settings.pass_size]
             tarind = np.delete(ens_idx, minind)
@@ -830,18 +831,18 @@ if __name__ == '__main__':
             ens_rl[mut_ind] = evol_output[2]
             ens_concCC[mut_ind] = evol_output[3]
             
-    #        for tt in range(len(mut_ind)):
-    #            r = te.loada(ens_model[mut_ind[tt]])
-    #            try:
-    #                r.steadyState()
-    #            except:
-    #                print("Failure detacted at mutation: ", mut_ind[tt])
-    #                print(np.sort(mut_ind))
-    #                breakFlag = True
-    #                break
-    #        
-    #        if breakFlag:
-    #            break
+            # for tt in range(len(mut_ind)):
+            #     r = te.loada(ens_model[mut_ind[tt]])
+            #     try:
+            #         r.steadyState()
+            #     except:
+            #         print("Failure detacted at mutation: ", mut_ind[tt])
+            #         print(np.sort(mut_ind))
+            #         breakFlag = True
+            #         break
+            
+            # if breakFlag:
+            #     break
             
             rnd_output = random_gen(ens_model, ens_dist, ens_rl, ens_concCC,
                                     mut_ind_inv, Settings)
@@ -870,32 +871,28 @@ if __name__ == '__main__':
             terminate = updateTC(n, [best_dist, avg_dist, med_dist, top_dist], 
                                  Settings)
             
-            # print("Minimum distance: {}".format(best_dist[-1]))
-            # print("Top 5 distance: {}".format(top_dist[-1]))
-            # print("Average distance: {}".format(avg_dist[-1]))
+            # for tt in range(len(mut_ind_inv)):
+            #     r = te.loada(ens_model[mut_ind_inv[tt]])
+            #     try:
+            #         r.steadyState()
+            #     except:
+            #         print("Failure detacted at random gen: ", mut_ind_inv[tt])
+            #         print(np.sort(mut_ind_inv))
+            #         breakFlag = True
+            #         break
             
-    #        for tt in range(len(mut_ind_inv)):
-    #            r = te.loada(ens_model[mut_ind_inv[tt]])
-    #            try:
-    #                r.steadyState()
-    #            except:
-    #                print("Failure detacted at random gen: ", mut_ind_inv[tt])
-    #                print(np.sort(mut_ind_inv))
-    #                breakFlag = True
-    #                break
-    #        
-    #        if breakFlag:
-    #            break
+            # if breakFlag:
+            #     break
             
             # Error check
-            #if np.average(dist_top) > 10000:
-                #break
+            # if np.average(dist_top) > 10000:
+            #     break
     
         # Check the run time
         t2 = time.time()
         print("Run time: {}".format(t2-t1))
         
-        #%%
+#%%
         # Collect models
         
         if Settings.EXPORT_ALL_MODELS:
@@ -905,9 +902,8 @@ if __name__ == '__main__':
             kdeOutput = analysis.selectWithKernalDensity(model_top, dist_top)
             model_col = model_top[:kdeOutput[0][0]]
             dist_col = dist_top[:kdeOutput[0][0]]
-        
             
-    #%%
+#%%
         Settings.EXPORT_PATH = os.path.abspath(os.path.join(os.getcwd(), Settings.EXPORT_PATH))
         if (Settings.SAVE_PLOT or Settings.EXPORT_SETTINGS or 
             Settings.EXPORT_OUTPUT or Settings.EXPORT_ALL_MODELS):
@@ -932,9 +928,7 @@ if __name__ == '__main__':
                 pt.plotMemoryUsage(memory)
                 pt.plotDistanceHistogramWithKDE(kdeOutput, dist_top)
                 
-            # TODO: Add polishing with fast optimizer 
-                
-    #%%
+#%%
         if Settings.EXPORT_SETTINGS or Settings.EXPORT_OUTPUT:
             if Settings.EXPORT_SETTINGS:
                 ioutils.exportSettings(Settings, path=Settings.EXPORT_PATH)
