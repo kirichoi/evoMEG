@@ -78,6 +78,7 @@ def pickReactionType():
         
     return rType, regType, revType
 
+
 # Generates a reaction network in the form of a reaction list
 # reactionList = [nSpecies, reaction, ....]
 # reaction = [reactionType, [list of reactants], [list of product], rateConstant]
@@ -232,12 +233,7 @@ def generateReactionList(nSpecies, nReactions, realFloatingIdsIndSort, realBound
                 act_id = [reg_id[0]]
                 inhib_id = [reg_id[1]]
                 
-        reactionList.append([rType, 
-                             regType, 
-                             revType, 
-                             rct_id, 
-                             prd_id, 
-                             act_id, 
+        reactionList.append([rType, regType, revType, rct_id, prd_id, act_id, 
                              inhib_id])
         
     return reactionList

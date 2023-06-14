@@ -9,7 +9,7 @@ import sys, os
 import numpy as np
 import pandas as pd
 
-def exportSettings(settings, path=None):
+def exportSettings(Settings, path=None):
     """
     Export all settings to a specified path
     """
@@ -20,25 +20,31 @@ def exportSettings(settings, path=None):
         outputdir = os.path.join(os.getcwd(), 'output')
     
     outputtxt = open(os.path.join(outputdir, 'settings.txt'), 'w')
-    outputtxt.writelines('modelType, '+str(settings['modelType']) + '\n')
-    outputtxt.writelines('n_gen, '+str(settings['n_gen']) + '\n')
-    outputtxt.writelines('ens_size, '+str(settings['ens_size']) + '\n')
-    outputtxt.writelines('pass_size, '+str(settings['pass_size']) + '\n')
-    outputtxt.writelines('mut_size, '+str(settings['mut_size']) + '\n')
-    outputtxt.writelines('maxIter_gen, '+str(settings['maxIter_gen']) + '\n')
-    outputtxt.writelines('maxIter_mut, '+str(settings['maxIter_mut']) + '\n')
-    outputtxt.writelines('recomb, '+str(settings['recomb']) + '\n')
-    outputtxt.writelines('optiMaxIter, '+str(settings['optiMaxIter']) + '\n')
-    outputtxt.writelines('optiTol, '+str(settings['optiTol']) + '\n')
-    outputtxt.writelines('optiPolish, '+str(settings['optiPolish']) + '\n')
-    outputtxt.writelines('r_seed, '+str(settings['r_seed']) + '\n')
-    outputtxt.writelines('noise, '+str(settings['noise']) + '\n')
-    outputtxt.writelines('abs_noise, '+str(settings['abs_noise']) + '\n')
-    outputtxt.writelines('rel_noise, '+str(settings['rel_noise']) + '\n')
+    outputtxt.writelines('modelType: {}'.format(Settings.modelType) + '\n')
+    outputtxt.writelines('ens_size: {}'.format(Settings.ens_size) + '\n')
+    outputtxt.writelines('pass_size: {}'.format(Settings.pass_size) + '\n')
+    outputtxt.writelines('mut_size: {}'.format(Settings.mut_size) + '\n')
+    outputtxt.writelines('top_p: {}'.format(Settings.top_p) + '\n')
+    outputtxt.writelines('n_gen: {}'.format(Settings.n_gen) + '\n')
+    outputtxt.writelines('gen_static: {}'.format(Settings.gen_static) + '\n')
+    outputtxt.writelines('thres_avg: {}'.format(Settings.thres_avg) + '\n')
+    outputtxt.writelines('thres_median: {}'.format(Settings.thres_median) + '\n')
+    outputtxt.writelines('thres_shortest: {}'.format(Settings.thres_shortest) + '\n')
+    outputtxt.writelines('thres_top: {}'.format(Settings.thres_top) + '\n')
+    outputtxt.writelines('maxIter_gen: {}'.format(Settings.maxIter_gen) + '\n')
+    outputtxt.writelines('maxIter_mut: {}'.format(Settings.maxIter_mut) + '\n')
+    outputtxt.writelines('recomb: {}'.format(Settings.recomb) + '\n')
+    outputtxt.writelines('optiMaxIter: {}'.format(Settings.optiMaxIter) + '\n')
+    outputtxt.writelines('optiTol: {}'.format(Settings.optiTol) + '\n')
+    outputtxt.writelines('optiPolish: {}'.format(Settings.optiPolish) + '\n')
+    outputtxt.writelines('r_seed: {}'.format(Settings.r_seed) + '\n')
+    outputtxt.writelines('noise: {}'.format(Settings.noise) + '\n')
+    outputtxt.writelines('abs_noise: {}'.format(Settings.abs_noise) + '\n')
+    outputtxt.writelines('rel_noise: {}'.format(Settings.rel_noise) + '\n')
     outputtxt.close()
     
     
-def exportOutputs(models, dists, dist_list, settings, time, rl_track, path=None):
+def exportOutputs(models, dists, dist_list, Settings, time, rl_track, path=None):
     """
     Export all outputs to a specified path
     
@@ -61,17 +67,17 @@ def exportOutputs(models, dists, dist_list, settings, time, rl_track, path=None)
                         columns=['generation best', 
                                  'generation average',
                                  'generation median',
-                                 'generation top5'])
+                                 'generation top {}'.format(int(Settings.top_p*100))])
     stat.to_csv(os.path.join(outputdir, 'dist_stat.txt'))
     
     outputtxt = open(os.path.join(outputdir, 'report.txt'), 'w')
     outputtxt.writelines('------------------------- REPORT -------------------------\n')
     outputtxt.writelines('RUN COMPLETE. HERE ARE SOME METRIC YOU MIGHT BE INTERESTED\n')
-    outputtxt.writelines('No. of Generations: ' + str(settings['n_gen']) + '\n')
-    outputtxt.writelines('Ensemble Size: ' + str(settings['ens_size']) + '\n')
-    outputtxt.writelines('No. of Collected Models: ' + str(len(models)) + '\n')
-    outputtxt.writelines('Run Time: ' + str(time) + ' s\n')
-    outputtxt.writelines('No. Stoich. Analyzed: ' + str(len(rl_track)) + '\n')
+    outputtxt.writelines('No. of Generations: {}'.format(Settings.n_gen) + '\n')
+    outputtxt.writelines('Ensemble Size: {}'.format(Settings.ens_size) + '\n')
+    outputtxt.writelines('No. of Collected Models: {}'.format(len(models)) + '\n')
+    outputtxt.writelines('Run Time: {:.f}'.format(time) + ' s\n')
+    outputtxt.writelines('No. Stoich. Analyzed: {}'.formant(len(rl_track)) + '\n')
     outputtxt.close()
     
     for i in range(len(models)):
