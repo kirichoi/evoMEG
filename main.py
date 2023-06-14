@@ -647,7 +647,7 @@ if __name__ == '__main__':
         # Flag to add Gaussian noise to the input
         NOISE = False
         # Standard deviation of absolute noise
-        ABS_NOISE_STD = 0.005   
+        ABS_NOISE_STD = 0.005
         # Standard deviation of relative noise
         REL_NOISE_STD = 0.2
         
@@ -981,7 +981,7 @@ if __name__ == '__main__':
             
             if Settings.EXPORT_OUTPUT:
                 ioutils.exportOutputs(model_col, dist_col, [best_dist, avg_dist, med_dist, top_dist], 
-                                      Settings, t2-t1, rl_track, path=Settings.EXPORT_PATH)
+                                      Settings, t2-t1, rl_track, n, path=Settings.EXPORT_PATH)
 
         
 

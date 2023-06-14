@@ -44,7 +44,7 @@ def exportSettings(Settings, path=None):
     outputtxt.close()
     
     
-def exportOutputs(models, dists, dist_list, Settings, time, rl_track, path=None):
+def exportOutputs(models, dists, dist_list, Settings, time, rl_track, n, path=None):
     """
     Export all outputs to a specified path
     
@@ -73,7 +73,7 @@ def exportOutputs(models, dists, dist_list, Settings, time, rl_track, path=None)
     outputtxt = open(os.path.join(outputdir, 'report.txt'), 'w')
     outputtxt.writelines('------------------------- REPORT -------------------------\n')
     outputtxt.writelines('RUN COMPLETE. HERE ARE SOME METRIC YOU MIGHT BE INTERESTED\n')
-    outputtxt.writelines('No. of Generations: {}'.format(Settings.n_gen) + '\n')
+    outputtxt.writelines('No. of Generations: {}'.format(n) + '\n')
     outputtxt.writelines('Ensemble Size: {}'.format(Settings.ens_size) + '\n')
     outputtxt.writelines('No. of Collected Models: {}'.format(len(models)) + '\n')
     outputtxt.writelines('Run Time: {:.2f}'.format(time) + ' s\n')
