@@ -38,9 +38,9 @@ def exportSettings(Settings, path=None):
     outputtxt.writelines('optiTol: {}'.format(Settings.optiTol) + '\n')
     outputtxt.writelines('optiPolish: {}'.format(Settings.optiPolish) + '\n')
     outputtxt.writelines('r_seed: {}'.format(Settings.r_seed) + '\n')
-    outputtxt.writelines('noise: {}'.format(Settings.noise) + '\n')
-    outputtxt.writelines('abs_noise: {}'.format(Settings.abs_noise) + '\n')
-    outputtxt.writelines('rel_noise: {}'.format(Settings.rel_noise) + '\n')
+    outputtxt.writelines('noise: {}'.format(Settings.NOISE) + '\n')
+    outputtxt.writelines('abs_noise: {}'.format(Settings.ABS_NOISE_STD) + '\n')
+    outputtxt.writelines('rel_noise: {}'.format(Settings.REL_NOISE_STD) + '\n')
     outputtxt.close()
     
     
@@ -76,8 +76,8 @@ def exportOutputs(models, dists, dist_list, Settings, time, rl_track, path=None)
     outputtxt.writelines('No. of Generations: {}'.format(Settings.n_gen) + '\n')
     outputtxt.writelines('Ensemble Size: {}'.format(Settings.ens_size) + '\n')
     outputtxt.writelines('No. of Collected Models: {}'.format(len(models)) + '\n')
-    outputtxt.writelines('Run Time: {:.f}'.format(time) + ' s\n')
-    outputtxt.writelines('No. Stoich. Analyzed: {}'.formant(len(rl_track)) + '\n')
+    outputtxt.writelines('Run Time: {:.2f}'.format(time) + ' s\n')
+    outputtxt.writelines('No. Stoich. Analyzed: {}'.format(len(rl_track)) + '\n')
     outputtxt.close()
     
     for i in range(len(models)):
