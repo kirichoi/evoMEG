@@ -788,7 +788,10 @@ if __name__ == '__main__':
         best_dist.append(dist_top[0])
         avg_dist.append(np.average(dist_top))
         med_dist.append(np.median(dist_top))
-        top_dist.append(np.average(np.unique(dist_top)[:int(Settings.top_p*Settings.ens_size)]))
+        top_ind = int(Settings.top_p*Settings.ens_size)
+        if top_ind == 0:
+            top_ind = 1
+        top_dist.append(np.average(np.unique(dist_top)[:top_ind]))
         
         print("Minimum distance: {}".format(best_dist[-1]))
         print("Top {} distance: {}".format(int(Settings.top_p*100), top_dist[-1]))
@@ -858,7 +861,7 @@ if __name__ == '__main__':
             best_dist.append(dist_top[0])
             avg_dist.append(np.average(dist_top))
             med_dist.append(np.median(dist_top))
-            top_dist.append(np.average(np.unique(dist_top)[:int(Settings.top_p*Settings.ens_size)]))
+            top_dist.append(np.average(np.unique(dist_top)[:top_ind]))
             
             memory.append(process.memory_info().rss)
             
