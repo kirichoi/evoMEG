@@ -160,6 +160,8 @@ def selectWithKernalDensity(model_top, dist_top):
     
     minInd = signal.argrelextrema(log_dens, np.less)
     
+    
+    
     if len(minInd[0]) == 0:
         minInd = [[len(model_top)]]
     

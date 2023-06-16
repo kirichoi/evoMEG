@@ -118,8 +118,9 @@ def plotDistanceHistogramWithKDE(kdeOutput, dist_top, nbin=40, SAVE_PATH=None):
     """
     """
     
+    x = np.linspace(0, np.max(dist_top), int(np.max(dist_top)*10))
     hist = plt.hist(dist_top, bins=nbin, density=True)
-    plt.vlines(dist_top[kdeOutput[0][0]-1], 0, np.max(hist[0]), 
+    plt.vlines(x[kdeOutput[0][0]], 0, np.max(hist[0]), 
                linestyles='dashed', color='tab:green')
     plt.plot(kdeOutput[2], np.exp(kdeOutput[1]), color='tab:red')
     plt.xlabel("Distance", fontsize=15)
@@ -199,3 +200,31 @@ def plotNetworkEnsemble(path, index=None, threshold=0., scale=1.5):
     net.scale = scale
     net.drawWeightedDiagram()
 
+def plotConcCC(model, SAVE_PATH=None):
+    
+    try:
+        r = te.loada(model)
+    except:
+        try:
+            r = te.loads(model)
+        except:
+            raise Exception("Not a valid model")
+    
+    try:
+        concCC = r.getScaledConcentrationControlCoefficientMatrix()
+    except:
+        raise Exception("Cannot calculate control coefficients")
+                
+    fig = plt.figure(figsize=(6,4))
+    plt.imshow(concCC, interpolation='none', cmap='RdBu')
+    plt.yticks(np.arange(np.shape(concCC)[0]), concCC.rownames)
+    plt.xticks(np.arange(np.shape(concCC)[1]), concCC.colnames)
+    
+    if SAVE_PATH is not None:
+        if os.path.splitext(SAVE_PATH)[1] == '':
+            plt.savefig(os.path.join(SAVE_PATH, 'images/controlCoeff.pdf'), bbox_inches='tight')
+        else:
+            plt.savefig(SAVE_PATH, bbox_inches='tight')
+    plt.show()
+    
+    

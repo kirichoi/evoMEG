@@ -458,7 +458,7 @@ def initialize(Settings):
         antimony.clearPreviousLoads()
         antimony.freeAll()
     
-    print("In generation: 1")
+    print("In generation: 0")
     print("Number of total iterations = {}".format(numIter))
     print("Number of bad models = {}".format(numBadModels))
     
@@ -613,9 +613,9 @@ if __name__ == '__main__':
         # Settings to control termination criterion
         
         # Maximum number of generations
-        n_gen = None
+        n_gen = 50
         # Number of generations w/o improvement
-        gen_static = 10
+        gen_static = None
         # Threshold average distance
         thres_avg = None
         # Threshold median distance
@@ -891,6 +891,8 @@ if __name__ == '__main__':
         # Check the run time
         t2 = time.time()
         print("Run time: {}".format(t2-t1))
+        
+        roadrunner.Config.setValue(roadrunner.Config.PYTHON_ENABLE_NAMED_MATRIX, 1)
         
 #%%
         # Collect models
