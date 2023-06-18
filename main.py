@@ -900,11 +900,12 @@ if __name__ == '__main__':
 #%%
         # Collect models
         
+        kdeOutput = analysis.selectWithKernalDensity(model_top, dist_top)
+        
         if Settings.EXPORT_ALL_MODELS:
             model_col = model_top
             dist_col = dist_top
         else:
-            kdeOutput = analysis.selectWithKernalDensity(model_top, dist_top)
             model_col = model_top[:kdeOutput[0][0]]
             dist_col = dist_top[:kdeOutput[0][0]]
             
