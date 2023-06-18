@@ -5,7 +5,7 @@ Created on Sat May 19 16:01:19 2018
 @author: kirichoi
 """
 
-import os, sys, psutil
+import os, sys, psutil, getopt
 import tellurium as te
 import roadrunner
 import numpy as np
@@ -673,15 +673,37 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv, Settings):
             
     return [rnd_dist, rnd_model, rnd_rl, rnd_concCC]
 
+
+def argparse(argv):
+    
+    try:
+        opts, args = getopt.getopt(argv, "hs:m:", ["help","setting=","model="])
+    except getopt.GetoptError:
+        print('main.py -s <settingfile> -m <modelfile>')
+        sys.exit(2)
+        
+    for opt, arg in opts:
+        if opt=="-h" or opt=="--help":
+            print('main.py -s <settingfile> -m <modelfile>')
+            sys.exit()
+        elif opt in ("-s", "--setting"):
+            Settings.READ_SETTINGS = arg
+        elif opt in ("-m", "--model"):
+            Settings.MODEL_INPUT = arg
+
+
 # TODO: simulated annealing (multiply to fitness for rate constants)
 if __name__ == '__main__':
-    roadrunner.Logger.disableLogging()
-    # roadrunner.Config.setValue(roadrunner.Config.ROADRUNNER_DISABLE_WARNINGS, 3)
-
-#%% Settings
+#%% Import Settings
     Settings = SettingsClass()
+    argparse(sys.argv[1:])
+    
+    if Settings.READ_SETTINGS != None:
+        ioutils.readSettings(Settings)
     
 #%% Analyze True Model
+    roadrunner.Logger.disableLogging()
+    # roadrunner.Config.setValue(roadrunner.Config.ROADRUNNER_DISABLE_WARNINGS, 3)
 
     # if conservedMoiety:
     #     roadrunner.Config.setValue(roadrunner.Config.LOADSBMLOPTIONS_CONSERVED_MOIETIES, True)
@@ -693,9 +715,6 @@ if __name__ == '__main__':
     # roadrunner.Config.setValue(roadrunner.Config.ROADRUNNER_DISABLE_PYTHON_DYNAMIC_PROPERTIES, 1)
     roadrunner.Config.setValue(roadrunner.Config.PYTHON_ENABLE_NAMED_MATRIX, 0)
     # roadrunner.Config.setValue(roadrunner.Config.MAX_OUTPUT_ROWS, 5)
-
-    if Settings.READ_SETTINGS != None:
-        ioutils.readSettings(Settings)
 
     if Settings.MODEL_INPUT != None:
         # Using custom models
