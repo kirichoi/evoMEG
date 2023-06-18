@@ -21,6 +21,116 @@ import copy
 
 #np.seterr(all='raise')
 
+class SettingsClass:
+    
+    def __init__(self):
+        # Input ===============================================================
+        # Load experimental input or preconfigured settings
+        
+        # Path to a custom model (default: None)
+        self.MODEL_INPUT = None
+        # Path to experimental data - not implemented (default: None)
+        self.DATA_INPUT = None
+        # Path to preconfigured settings (default: None)
+        self.READ_SETTINGS = None
+        
+        # Test models =====================================================
+        # A selection of test models including (reversible/irreverisble) 
+        # feedforward loop, linear chain, nested cycles, feedback loop, and
+        # branched pathway
+            
+        # 'FFL_m', 'Linear_m', 'Nested_m', 'Branched_m', 'Feedback_m', 'sigPath'
+        # 'FFL_r', 'Linear_r', 'Nested_r', 'Branched_r', 'Feedback_r'
+        self.modelType = 'FFL_m'
+        
+        
+        # General settings ====================================================
+        # Settings for the population and the algorithm
+        
+        # Size of output ensemble
+        self.ens_size = 10
+        # Number of models passed to next generation w/o mutation (default: int(ens_size/10))
+        self.pass_size = int(self.ens_size/10)
+        # Number of mutated models (default: int(ens_size/2))
+        self.mut_size = int(self.ens_size/2)
+        # Top percentage of population to track (default: 0.05)
+        self.top_p = 0.05
+        # Maximum iteration allowed for random generation (default: 100)
+        self.maxIter_gen = 100
+        # Maximum iteration allowed for mutation (default: 100)
+        self.maxIter_mut = 100
+        # Recombination probability (default: 0.3)
+        self.recomb = 0.3
+        # Set conserved moiety (default: False)
+        self.conservedMoiety = False
+        
+        
+        # Termination criterion settings ======================================
+        # Settings to control termination criterion
+        
+        # Maximum number of generations
+        self.n_gen = 5
+        # Number of generations w/o improvement
+        self.gen_static = None
+        # Threshold average distance
+        self.thres_avg = None
+        # Threshold median distance
+        self.thres_median = None
+        # Threshold shortest distance
+        self.thres_shortest = None
+        # Threshold top p-percent smallest distance
+        self.thres_top = None
+        
+        # Optimizer settings ==================================================
+        # Settings specific to differential evolution
+        
+        # Maximum iteration allowed (default: 1000)
+        self.optiMaxIter = 1000
+        # Optimizer tolerance (default: 1)
+        self.optiTol = 1.
+        # Run additional optimization at the end for polishing (default: False)
+        self.optiPolish = False
+        # Weight for control coefficients when calculating the distance - unused
+        self.w1 = 16
+        # Weight for steady-state and flux when calculating the distance - unused
+        self.w2 = 1.0
+        
+        
+        # Randomization settings ==============================================
+        
+        # Random seed
+        self.r_seed = 123123
+        # Flag to add Gaussian noise to the input
+        self.NOISE = False
+        # Standard deviation of absolute noise
+        self.ABS_NOISE_STD = 0.005
+        # Standard deviation of relative noise
+        self.REL_NOISE_STD = 0.2
+        
+        
+        # Plotting settings ===================================================
+        
+        # Flag to plot
+        self.SHOW_PLOT = True
+        # Flag to save plot
+        self.SAVE_PLOT = True
+        
+        
+        # Data settings =======================================================
+            
+        # Flag to collect all models in the ensemble
+        self.EXPORT_ALL_MODELS = True
+        # Flag to save collected models
+        self.EXPORT_OUTPUT = True
+        # Flag to save current settings
+        self.EXPORT_SETTINGS = True
+        # Path to save the output
+        self.EXPORT_PATH = './outputs_new/test'
+        
+        # Flag to run the algorithm
+        self.RUN = False
+
+
 def customGetScaledConcentrationControlCoefficientMatrix(r):
     '''
     Numpy implementation of GetScaledConcentrationControlCoefficientMatrix()
@@ -569,112 +679,10 @@ if __name__ == '__main__':
     # roadrunner.Config.setValue(roadrunner.Config.ROADRUNNER_DISABLE_WARNINGS, 3)
 
 #%% Settings
-    
-    class Settings:
-        # Input ===================================================================
-        # Load experimental input or preconfigured settings
-        
-        # Path to experimental data - unused (default: None)
-        INPUT = None
-        # Path to preconfigured settings - not implemented (default: None)
-        READ_SETTINGS = None
-        
-        # Test models =============================================================
-        # A selection of test models including (reversible/irreverisble) feedforward
-        # loop, linear chain, nested cycles, feedback loop, and branched pathway
-            
-        # 'FFL_m', 'Linear_m', 'Nested_m', 'Branched_m', 'Feedback_m', 'sigPath'
-        # 'FFL_r', 'Linear_r', 'Nested_r', 'Branched_r', 'Feedback_r'
-        modelType = 'FFL_m'
-        
-        
-        # General settings ========================================================
-        # Settings for the population and the algorithm
-        
-        # Size of output ensemble
-        ens_size = 50
-        # Number of models passed to next generation w/o mutation (default: int(ens_size/10))
-        pass_size = int(ens_size/10)
-        # Number of mutated models (default: int(ens_size/2))
-        mut_size = int(ens_size/2)
-        # Top percentage of population to track (default: 0.05)
-        top_p = 0.05
-        # Maximum iteration allowed for random generation (default: 100)
-        maxIter_gen = 100
-        # Maximum iteration allowed for mutation (default: 100)
-        maxIter_mut = 100
-        # Recombination probability (default: 0.3)
-        recomb = 0.3
-        # Set conserved moiety (default: False)
-        conservedMoiety = False
-        
-        
-        # Termination criterion settings ==========================================
-        # Settings to control termination criterion
-        
-        # Maximum number of generations
-        n_gen = 50
-        # Number of generations w/o improvement
-        gen_static = None
-        # Threshold average distance
-        thres_avg = None
-        # Threshold median distance
-        thres_median = None
-        # Threshold shortest distance
-        thres_shortest = None
-        # Threshold top p-percent smallest distance
-        thres_top = None
-        
-        # Optimizer settings ======================================================
-        # Settings specific to differential evolution
-        
-        # Maximum iteration allowed (default: 1000)
-        optiMaxIter = 1000
-        # Optimizer tolerance (default: 1)
-        optiTol = 1.
-        # Run additional optimization at the end for polishing (default: False)
-        optiPolish = False
-        # Weight for control coefficients when calculating the distance - unused
-        w1 = 16
-        # Weight for steady-state and flux when calculating the distance - unused
-        w2 = 1.0
-        
-        
-        # Randomization settings ==================================================
-        
-        # Random seed
-        r_seed = 123123
-        # Flag to add Gaussian noise to the input
-        NOISE = False
-        # Standard deviation of absolute noise
-        ABS_NOISE_STD = 0.005
-        # Standard deviation of relative noise
-        REL_NOISE_STD = 0.2
-        
-        
-        # Plotting settings =======================================================
-        
-        # Flag to plot
-        SHOW_PLOT = True
-        # Flag to save plot
-        SAVE_PLOT = False
-        
-        
-        # Data settings ===========================================================
-            
-        # Flag to collect all models in the ensemble
-        EXPORT_ALL_MODELS = False
-        # Flag to save collected models
-        EXPORT_OUTPUT = False
-        # Flag to save current settings
-        EXPORT_SETTINGS = False
-        # Path to save the output
-        EXPORT_PATH = './outputs_new/FFL_m_noise_test_3'
-        
-        # Flag to run the algorithm
-        RUN = True
+    Settings = SettingsClass()
     
 #%% Analyze True Model
+
     # if conservedMoiety:
     #     roadrunner.Config.setValue(roadrunner.Config.LOADSBMLOPTIONS_CONSERVED_MOIETIES, True)
     
@@ -685,11 +693,30 @@ if __name__ == '__main__':
     # roadrunner.Config.setValue(roadrunner.Config.ROADRUNNER_DISABLE_PYTHON_DYNAMIC_PROPERTIES, 1)
     roadrunner.Config.setValue(roadrunner.Config.PYTHON_ENABLE_NAMED_MATRIX, 0)
     # roadrunner.Config.setValue(roadrunner.Config.MAX_OUTPUT_ROWS, 5)
+
+    if Settings.READ_SETTINGS != None:
+        ioutils.readSettings(Settings)
+
+    if Settings.MODEL_INPUT != None:
+        # Using custom models
+        readModel = Settings.MODEL_INPUT
+        try:
+            realRR = te.loada(readModel)
+            realModel = readModel
+            realRL = ng.generateReactionListFromAntimony(realModel)
+        except:
+            try:
+                realRR = te.loads(readModel)
+                realModel = realRR.getAntimony()
+                realRL = ng.generateReactionListFromAntimony(realModel)
+            except:
+                raise Exception("Cannot read the given model")
         
-    # Using one of the test models
-    realModel = ioutils.testModels(Settings.modelType)
-    realRR = te.loada(realModel)
-    realRL = ng.generateReactionListFromAntimony(realModel)
+    else:
+        # Using one of the test models
+        realModel = ioutils.testModels(Settings.modelType)
+        realRR = te.loada(realModel)
+        realRL = ng.generateReactionListFromAntimony(realModel)
     
     # Species
     realNumBoundary = realRR.getNumBoundarySpecies()
@@ -734,10 +761,10 @@ if __name__ == '__main__':
     ns = realNumBoundary + realNumFloating # Number of species
     nsList = np.arange(ns)
     nr = realRR.getNumReactions() # Number of reactions
+    nrList = np.arange(nr)
     
     ens_range = range(Settings.ens_size)
     mut_range = range(Settings.mut_size)
-    r_range = range(nr)
     
     realCount = np.array(np.unravel_index(np.argsort(realFluxCC, axis=None), realFluxCC.shape)).T
         

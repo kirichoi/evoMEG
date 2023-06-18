@@ -23,7 +23,12 @@ def exportSettings(Settings, path=None):
         outputdir = os.path.join(os.getcwd(), 'output')
     
     outputtxt = open(os.path.join(outputdir, 'settings.txt'), 'w')
-    outputtxt.writelines('modelType: {}'.format(Settings.modelType) + '\n')
+    if Settings.MODEL_INPUT != None:
+        outputtxt.writelines('MODEL_INPUT: {}'.format(Settings.MODEL_INPUT) + '\n')
+    else:
+        outputtxt.writelines('modelType: {}'.format(Settings.modelType) + '\n')
+    if Settings.DATA_INPUT != None:
+        outputtxt.writelines('DATA_INPUT: {}'.format(Settings.DATA_INPUT) + '\n')
     outputtxt.writelines('ens_size: {}'.format(Settings.ens_size) + '\n')
     outputtxt.writelines('pass_size: {}'.format(Settings.pass_size) + '\n')
     outputtxt.writelines('mut_size: {}'.format(Settings.mut_size) + '\n')
@@ -41,9 +46,9 @@ def exportSettings(Settings, path=None):
     outputtxt.writelines('optiTol: {}'.format(Settings.optiTol) + '\n')
     outputtxt.writelines('optiPolish: {}'.format(Settings.optiPolish) + '\n')
     outputtxt.writelines('r_seed: {}'.format(Settings.r_seed) + '\n')
-    outputtxt.writelines('noise: {}'.format(Settings.NOISE) + '\n')
-    outputtxt.writelines('abs_noise: {}'.format(Settings.ABS_NOISE_STD) + '\n')
-    outputtxt.writelines('rel_noise: {}'.format(Settings.REL_NOISE_STD) + '\n')
+    outputtxt.writelines('NOISE: {}'.format(Settings.NOISE) + '\n')
+    outputtxt.writelines('ABS_NOISE_STD: {}'.format(Settings.ABS_NOISE_STD) + '\n')
+    outputtxt.writelines('REL_NOISE_STD: {}'.format(Settings.REL_NOISE_STD) + '\n')
     outputtxt.close()
     
     
@@ -90,10 +95,34 @@ def exportOutputs(models, dists, dist_list, Settings, time, rl_track, n, path=No
         modeltxt.close()
     
 
-def readSettings(settingsPath):
+def readSettings(Settings):
     """
+    Read setting file and update Settings class
+    
+    :param Settings: Settings class
     """
-
+    
+    f = open(Settings.READ_SETTINGS, "r")
+    ls = f.read().splitlines()
+    f.close()
+    
+    for s in ls:
+        sp = s.split(': ')
+        try:
+            if sp[1].replace('.','',1).isdigit():
+                if sp[1].isdigit():
+                    Settings.__setattr__(sp[0], int(sp[1]))
+                else:
+                    Settings.__setattr__(sp[0], float(sp[1]))
+            elif sp[1] == 'True':
+                Settings.__setattr__(sp[0], True)
+            elif sp[1] == 'False':
+                Settings.__setattr__(sp[0], False)
+            else:
+                Settings.__setattr__(sp[0], sp[1])
+        except:
+            pass
+    
 
 def readModels(modelsPath):
     """
