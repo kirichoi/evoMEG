@@ -15,7 +15,7 @@ import networkGenerator as ng
 import plotting as pt
 import ioutils
 import analysis
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import time
 import copy
 
@@ -34,7 +34,7 @@ class SettingsClass:
         # Path to preconfigured settings (default: None)
         self.READ_SETTINGS = None
         
-        # Test models =====================================================
+        # Test models =========================================================
         # A selection of test models including (reversible/irreverisble) 
         # feedforward loop, linear chain, nested cycles, feedback loop, and
         # branched pathway
@@ -127,7 +127,7 @@ class SettingsClass:
         # Path to save the output
         self.EXPORT_PATH = './outputs_new/test'
         
-        # Flag to run the algorithm
+        # Flag to run the algorithm - temporary
         self.RUN = False
 
 
@@ -271,15 +271,17 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
         
         minrndidx = np.random.choice(minind)
         
-        stt = [np.zeros((2,2)),[],[]]
+        stt = np.zeros((2,2))
+        fid = []
+        bid = []
         reactionList = rl_track[0]
         
         o = 0
         
-        while ((stt[1] != realFloatingIdsIndSortList or stt[2] != realBoundaryIdsIndSortList or
-                reactionList in rl_track or np.sum(stt[0]) != 0 or 
-                len(check_duplicate_reaction(stt[0])) > 0 or 
-                np.linalg.matrix_rank(stt[0]) != realNumFloating) and (o < Settings.maxIter_mut)):
+        while ((fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList or
+                reactionList in rl_track or np.sum(stt) != 0 or 
+                len(check_duplicate_reaction(stt)) > 0 or 
+                np.linalg.matrix_rank(stt) != realNumFloating) and (o < Settings.maxIter_mut)):
             r_idx = np.random.choice(np.arange(nr), p=np.divide(tempdiff, np.sum(tempdiff)))
             
             reactionList = copy.deepcopy(mut_rl[m])
@@ -418,10 +420,10 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
                                        act_id, 
                                        inhib_id]
             
-            st = ng.getFullStoichiometryMatrix(reactionList, ns).tolist()
-            stt = ng.removeBoundaryNodes(np.array(st))
-            stt[0][stt[0]>1] = 1
-            stt[0][stt[0]<-1] = -1
+            st = ng.getFullStoichiometryMatrix(reactionList, ns)
+            stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
+            # stt[0][stt[0]>1] = 1
+            # stt[0][stt[0]<-1] = -1
             o += 1
         
         if o >= Settings.maxIter_mut:
@@ -431,7 +433,7 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
             eval_concCC[m] = mut_concCC[m]
         else:
             antStr = ng.generateAntimony(realFloatingIdsSort, realBoundaryIdsSort, 
-                                          stt[1], stt[2], reactionList, 
+                                          fid, bid, reactionList, 
                                           boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
@@ -446,7 +448,7 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
                             tol=Settings.optiTol, polish=Settings.optiPolish, 
                             seed=Settings.r_seed)
                 
-                if not res.success or res.fun == 1e6:
+                if not res.success or res.fun >= 1e6:
                     eval_dist[m] = mut_dist[m]
                     eval_model[m] = mut_model[m]
                     eval_rl[m] = mut_rl[m]
@@ -508,22 +510,22 @@ def initialize(Settings):
     
     # Initial Random generation
     while (numGoodModels < Settings.ens_size):
-        rl = ng.generateReactionList(ns, nr, realFloatingIdsIndSort, 
+        rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
                                      realBoundaryIdsIndSort, realConcCC)
-        st = ng.getFullStoichiometryMatrix(rl, ns).tolist()
-        stt = ng.removeBoundaryNodes(np.array(st))
-        stt[0][stt[0]>1] = 1
-        stt[0][stt[0]<-1] = -1
+        st = ng.getFullStoichiometryMatrix(rl, ns)
+        stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
+        # stt[0][stt[0]>1] = 1
+        # stt[0][stt[0]<-1] = -1
         # Ensure no redundant model
-        while (stt[1] != realFloatingIdsIndSortList or stt[2] != realBoundaryIdsIndSortList
-               or rl in rl_track or np.sum(stt[0]) != 0 or np.linalg.matrix_rank(stt[0]) != realNumFloating):
-            rl = ng.generateReactionList(ns, nr, realFloatingIdsIndSort, realBoundaryIdsIndSort, realConcCC)
-            st = ng.getFullStoichiometryMatrix(rl, ns).tolist()
-            stt = ng.removeBoundaryNodes(np.array(st))
-            stt[0][stt[0]>1] = 1
-            stt[0][stt[0]<-1] = -1
-        antStr = ng.generateAntimony(realFloatingIdsSort, realBoundaryIdsSort, stt[1],
-                                      stt[2], rl, boundary_init=realBoundaryVal)
+        while (fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList
+               or rl in rl_track or np.sum(stt) != 0 or np.linalg.matrix_rank(stt) != realNumFloating):
+            rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, realBoundaryIdsIndSort, realConcCC)
+            st = ng.getFullStoichiometryMatrix(rl, ns)
+            stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
+            # stt[0][stt[0]>1] = 1
+            # stt[0][stt[0]<-1] = -1
+        antStr = ng.generateAntimony(realFloatingIdsSort, realBoundaryIdsSort, fid,
+                                      bid, rl, boundary_init=realBoundaryVal)
 
         try:
             r = te.loada(antStr)
@@ -538,7 +540,7 @@ def initialize(Settings):
                                 tol=Settings.optiTol, polish=Settings.optiPolish, 
                                 seed=Settings.r_seed)
             
-            if not res.success or res.fun == 1e6:
+            if not res.success or res.fun >= 1e6:
                 numBadModels += 1
             else:
                 r.resetToOrigin()
@@ -595,23 +597,22 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv, Settings):
     
     for l in range(rndSize):
         d = 0
-        rl = ng.generateReactionList(ns, nr, realFloatingIdsIndSort, 
+        rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
                                      realBoundaryIdsIndSort, realConcCC)
-        st = ng.getFullStoichiometryMatrix(rl, ns).tolist()
-        stt = ng.removeBoundaryNodes(np.array(st))
-        stt[0][stt[0]>1] = 1
-        stt[0][stt[0]<-1] = -1
+        st = ng.getFullStoichiometryMatrix(rl, ns)
+        stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
+        # stt[0][stt[0]>1] = 1
+        # stt[0][stt[0]<-1] = -1
         # Ensure no redundant models
-        while ((stt[1] != realFloatingIdsIndSortList or 
-                stt[2] != realBoundaryIdsIndSortList or rl in list(ens_rl) or 
-                np.sum(stt[0]) != 0 or 
-                np.linalg.matrix_rank(stt[0]) != realNumFloating) and (d < Settings.maxIter_gen)):
-            rl = ng.generateReactionList(ns, nr, realFloatingIdsIndSort, 
+        while ((fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList or 
+                rl in list(ens_rl) or np.sum(stt) != 0 or 
+                np.linalg.matrix_rank(stt) != realNumFloating) and (d < Settings.maxIter_gen)):
+            rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
                                          realBoundaryIdsIndSort, realConcCC)
-            st = ng.getFullStoichiometryMatrix(rl, ns).tolist()
-            stt = ng.removeBoundaryNodes(np.array(st))
-            stt[0][stt[0]>1] = 1
-            stt[0][stt[0]<-1] = -1
+            st = ng.getFullStoichiometryMatrix(rl, ns)
+            stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
+            # stt[0][stt[0]>1] = 1
+            # stt[0][stt[0]<-1] = -1
             
             d += 1
         
@@ -622,7 +623,7 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv, Settings):
             rnd_concCC[l] = listconcCC[l]
         else:
             antStr = ng.generateAntimony(realFloatingIdsSort, realBoundaryIdsSort, 
-                            stt[1], stt[2], rl, boundary_init=realBoundaryVal)
+                                         fid, bid, rl, boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
                 concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
@@ -637,7 +638,7 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv, Settings):
                             seed=Settings.r_seed)
                 
                 # Failed to find solution
-                if not res.success or res.fun == 1e6 or np.isnan(concCC).any():
+                if not res.success or res.fun >= 1e6 or np.isnan(concCC).any():
                     rnd_dist[l] = listDist[l]
                     rnd_model[l] = listAntStr[l]
                     rnd_rl[l] = listrl[l]
@@ -780,7 +781,7 @@ if __name__ == '__main__':
     ns = realNumBoundary + realNumFloating # Number of species
     nsList = np.arange(ns)
     nr = realRR.getNumReactions() # Number of reactions
-    nrList = np.arange(nr)
+    nrList = np.argsort(np.sum(realConcCC, axis=0))#np.arange(nr)
     
     ens_range = range(Settings.ens_size)
     mut_range = range(Settings.mut_size)
@@ -941,8 +942,6 @@ if __name__ == '__main__':
         t2 = time.time()
         print("Run time: {}".format(t2-t1))
         
-        roadrunner.Config.setValue(roadrunner.Config.PYTHON_ENABLE_NAMED_MATRIX, 1)
-        
 #%%
         # Collect models
         
@@ -990,4 +989,4 @@ if __name__ == '__main__':
                                       Settings, t2-t1, rl_track, n, path=Settings.EXPORT_PATH)
 
         
-
+    roadrunner.Config.setValue(roadrunner.Config.PYTHON_ENABLE_NAMED_MATRIX, 1)

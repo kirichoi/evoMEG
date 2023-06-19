@@ -3,8 +3,8 @@
 import tellurium as te
 import random
 import numpy as np
-import copy
-import analysis
+# import copy
+# import analysis
 
 class ReactionType:
     UNIUNI = 0
@@ -82,12 +82,11 @@ def pickReactionType():
 # Generates a reaction network in the form of a reaction list
 # reactionList = [nSpecies, reaction, ....]
 # reaction = [reactionType, [list of reactants], [list of product], rateConstant]
-def generateReactionList(nSpecies, nReactions, realFloatingIdsIndSort, realBoundaryIdsIndSort, realConcCC):
+def generateReactionList(nsList, nrList, realFloatingIdsIndSort, realBoundaryIdsIndSort, realConcCC):
 
-    nsList = np.arange(nSpecies)
     reactionList = []
     
-    for r_idx in range(nReactions):
+    for r_idx in nrList:
         tarval = realConcCC[:,r_idx]
         ssum = np.sum(np.sign(tarval))
         if ssum > 0:
@@ -243,7 +242,7 @@ def generateReactionList(nSpecies, nReactions, realFloatingIdsIndSort, realBound
 # Returns a list:
 # [New Stoichiometry matrix, list of floatingIds, list of boundaryIds]
 def getFullStoichiometryMatrix(reactionList, ns):
-    reactionListCopy = copy.deepcopy(reactionList)
+    reactionListCopy = reactionList#copy.deepcopy(reactionList)
     st = np.zeros((ns, len(reactionListCopy)), dtype=int)
     
     for index, rind in enumerate(reactionListCopy):
@@ -287,21 +286,21 @@ def getFullStoichiometryMatrix(reactionList, ns):
         
 
 # Removes boundary or orphan species from stoichiometry matrix
-def removeBoundaryNodes(st):
+def removeBoundaryNodes(st, nsList, nrList):
     
-    dims = st.shape
+    # dims = st.shape
     
-    nSpecies = dims[0]
-    nReactions = dims[1]
+    # nSpecies = dims[0]
+    # nReactions = dims[1]
     
-    speciesIds = np.arange (nSpecies)
+    # speciesIds = np.arange(nSpecies)
     indexes = []
     orphanSpecies = []
     countBoundarySpecies = 0
-    for r in range(nSpecies): 
+    for r in nsList: 
         # Scan across the columns, count + and - coefficients
         plusCoeff = 0; minusCoeff = 0
-        for c in range(nReactions):
+        for c in nrList:
             if st[r,c] < 0:
                 minusCoeff = minusCoeff + 1
             elif st[r,c] > 0:
@@ -318,11 +317,16 @@ def removeBoundaryNodes(st):
             indexes.append(r)
             countBoundarySpecies = countBoundarySpecies + 1
 
-    floatingIds = np.delete(speciesIds, indexes+orphanSpecies, axis=0).astype(int)
-    floatingIds = floatingIds.tolist()
+    floatingIds = np.delete(nsList, indexes+orphanSpecies, axis=0).astype(int)
 
     boundaryIds = indexes
-    return [np.delete(st, indexes + orphanSpecies, axis=0), floatingIds, boundaryIds]
+    rsm = st[floatingIds]
+    rsm[rsm[0]>1] = 1
+    rsm[rsm[0]<-1] = -1
+    
+    floatingIds = floatingIds.tolist()
+    
+    return rsm, floatingIds, boundaryIds
 
 
 def generateRateLaw(rl, floatingIds, boundaryIds, rlt, Jind):
@@ -456,7 +460,7 @@ def generateSimpleRateLaw(rl, Jind):
 
 
 def generateAntimony(floatingIds, boundaryIds, stt1, stt2, reactionList, boundary_init=None):
-    reactionListCopy = copy.deepcopy(reactionList)
+    reactionListCopy = reactionList#copy.deepcopy(reactionList)
     Klist = []
     
     real = np.append(floatingIds, boundaryIds)
