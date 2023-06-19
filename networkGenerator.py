@@ -3,8 +3,6 @@
 import tellurium as te
 import random
 import numpy as np
-# import copy
-# import analysis
 
 class ReactionType:
     UNIUNI = 0
@@ -288,12 +286,6 @@ def getFullStoichiometryMatrix(reactionList, ns):
 # Removes boundary or orphan species from stoichiometry matrix
 def removeBoundaryNodes(st, nsList, nrList):
     
-    # dims = st.shape
-    
-    # nSpecies = dims[0]
-    # nReactions = dims[1]
-    
-    # speciesIds = np.arange(nSpecies)
     indexes = []
     orphanSpecies = []
     countBoundarySpecies = 0
