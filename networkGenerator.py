@@ -321,8 +321,8 @@ def removeBoundaryNodes(st, nsList, nrList):
 
     boundaryIds = indexes
     rsm = st[floatingIds]
-    rsm[rsm[0]>1] = 1
-    rsm[rsm[0]<-1] = -1
+    rsm[rsm>1] = 1
+    rsm[rsm<-1] = -1
     
     floatingIds = floatingIds.tolist()
     
