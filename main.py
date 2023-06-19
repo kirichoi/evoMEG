@@ -48,15 +48,13 @@ class SettingsClass:
         # Settings for the population and the algorithm
         
         # Size of output ensemble
-        self.ens_size = 10
-        # Number of models passed to next generation w/o mutation (default: int(ens_size/10))
+        self.ens_size = 50
+        # Number of models used for recombination (default: int(ens_size/10))
         self.pass_size = int(self.ens_size/10)
-        # Number of mutated models (default: int(ens_size/2))
-        self.mut_size = int(self.ens_size/2)
         # Top percentage of population to track (default: 0.05)
         self.top_p = 0.05
         # Maximum iteration allowed for random generation (default: 100)
-        self.maxIter_gen = 100
+        self.maxIter_gen = 500
         # Maximum iteration allowed for mutation (default: 100)
         self.maxIter_mut = 100
         # Recombination probability (default: 0.3)
@@ -69,7 +67,7 @@ class SettingsClass:
         # Settings to control termination criterion
         
         # Maximum number of generations
-        self.n_gen = 5
+        self.n_gen = 50
         # Number of generations w/o improvement
         self.gen_static = None
         # Threshold average distance
@@ -125,10 +123,10 @@ class SettingsClass:
         # Flag to save current settings
         self.EXPORT_SETTINGS = True
         # Path to save the output
-        self.EXPORT_PATH = './outputs_new/test'
+        self.EXPORT_PATH = './outputs_new/test2'
         
         # Flag to run the algorithm - temporary
-        self.RUN = False
+        self.RUN = True
 
 
 def customGetScaledConcentrationControlCoefficientMatrix(r):
@@ -251,7 +249,7 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
 
     global countf
     global counts
-    global rl_track
+    global stt_track
     
     eval_dist = np.empty(Settings.mut_size)
     eval_model = np.empty(Settings.mut_size, dtype='object')
@@ -274,14 +272,15 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
         stt = np.zeros((2,2))
         fid = []
         bid = []
-        reactionList = rl_track[0]
+        st = stt_track[0]
         
         o = 0
         
-        while ((fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList or
-                reactionList in rl_track or np.sum(stt) != 0 or 
-                len(check_duplicate_reaction(stt)) > 0 or 
-                np.linalg.matrix_rank(stt) != realNumFloating) and (o < Settings.maxIter_mut)):
+        while ((fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList 
+                or st[realFloatingIdsIndSortList].tolist() in stt_track or np.sum(stt) != 0 
+                or len(check_duplicate_reaction(stt)) > 0 
+                or np.linalg.matrix_rank(stt) != realNumFloating) 
+               and (o < Settings.maxIter_mut)):
             r_idx = np.random.choice(np.arange(nr), p=np.divide(tempdiff, np.sum(tempdiff)))
             
             reactionList = copy.deepcopy(mut_rl[m])
@@ -422,8 +421,6 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
             
             st = ng.getFullStoichiometryMatrix(reactionList, ns)
             stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
-            # stt[0][stt[0]>1] = 1
-            # stt[0][stt[0]<-1] = -1
             o += 1
         
         if o >= Settings.maxIter_mut:
@@ -433,8 +430,8 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
             eval_concCC[m] = mut_concCC[m]
         else:
             antStr = ng.generateAntimony(realFloatingIdsSort, realBoundaryIdsSort, 
-                                          fid, bid, reactionList, 
-                                          boundary_init=realBoundaryVal)
+                                         fid, bid, reactionList, 
+                                         boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
                 concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
@@ -469,7 +466,7 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
                             eval_dist[m] = res.fun
                             eval_model[m] = r.getAntimony(current=True)
                             eval_rl[m] = reactionList
-                            rl_track.append(reactionList)
+                            stt_track.append(st.tolist())
                             eval_concCC[m] = concCC
                     else:
                         eval_dist[m] = mut_dist[m]
@@ -496,7 +493,7 @@ def initialize(Settings):
 
     global countf
     global counts
-    global rl_track
+    global stt_track
     
     numBadModels = 0
     numGoodModels = 0
@@ -505,7 +502,7 @@ def initialize(Settings):
     ens_dist = np.empty(Settings.ens_size)
     ens_model = np.empty(Settings.ens_size, dtype='object')
     ens_rl = np.empty(Settings.ens_size, dtype='object')
-    rl_track = []
+    stt_track = []
     ens_concCC = np.empty(Settings.ens_size, dtype='object')
     
     # Initial Random generation
@@ -514,18 +511,16 @@ def initialize(Settings):
                                      realBoundaryIdsIndSort, realConcCC)
         st = ng.getFullStoichiometryMatrix(rl, ns)
         stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
-        # stt[0][stt[0]>1] = 1
-        # stt[0][stt[0]<-1] = -1
         # Ensure no redundant model
         while (fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList
-               or rl in rl_track or np.sum(stt) != 0 or np.linalg.matrix_rank(stt) != realNumFloating):
-            rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, realBoundaryIdsIndSort, realConcCC)
+               or st[realFloatingIdsIndSortList].tolist() in stt_track or np.sum(stt) != 0 
+               or np.linalg.matrix_rank(stt) != realNumFloating):
+            rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
+                                         realBoundaryIdsIndSort, realConcCC)
             st = ng.getFullStoichiometryMatrix(rl, ns)
             stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
-            # stt[0][stt[0]>1] = 1
-            # stt[0][stt[0]<-1] = -1
-        antStr = ng.generateAntimony(realFloatingIdsSort, realBoundaryIdsSort, fid,
-                                      bid, rl, boundary_init=realBoundaryVal)
+        antStr = ng.generateAntimony(realFloatingIdsSort, realBoundaryIdsSort, 
+                                     fid, bid, rl, boundary_init=realBoundaryVal)
 
         try:
             r = te.loada(antStr)
@@ -548,7 +543,7 @@ def initialize(Settings):
                 ens_dist[numGoodModels] = res.fun
                 ens_model[numGoodModels] = r.getAntimony(current=True)
                 ens_rl[numGoodModels] = rl
-                rl_track.append(rl)
+                stt_track.append(st.tolist())
                 concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
                 concCC[np.abs(concCC) < 1e-8] = 0
                 ens_concCC[numGoodModels] = concCC
@@ -574,14 +569,14 @@ def initialize(Settings):
     print("Number of total iterations = {}".format(numIter))
     print("Number of bad models = {}".format(numBadModels))
     
-    return ens_dist, ens_model, ens_rl, rl_track, ens_concCC
+    return ens_dist, ens_model, ens_rl, stt_track, ens_concCC
 
 
 def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv, Settings):
     
     global countf
     global counts
-    global rl_track
+    global stt_track
     
     listAntStr = ens_model[mut_ind_inv]
     listDist = ens_dist[mut_ind_inv]
@@ -601,18 +596,14 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv, Settings):
                                      realBoundaryIdsIndSort, realConcCC)
         st = ng.getFullStoichiometryMatrix(rl, ns)
         stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
-        # stt[0][stt[0]>1] = 1
-        # stt[0][stt[0]<-1] = -1
         # Ensure no redundant models
         while ((fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList or 
-                rl in list(ens_rl) or np.sum(stt) != 0 or 
+                st[realFloatingIdsIndSortList].tolist() in stt_track or np.sum(stt) != 0 or 
                 np.linalg.matrix_rank(stt) != realNumFloating) and (d < Settings.maxIter_gen)):
             rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
                                          realBoundaryIdsIndSort, realConcCC)
             st = ng.getFullStoichiometryMatrix(rl, ns)
             stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
-            # stt[0][stt[0]>1] = 1
-            # stt[0][stt[0]<-1] = -1
             
             d += 1
         
@@ -650,7 +641,7 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv, Settings):
                         rnd_dist[l] = res.fun
                         rnd_model[l] = r.getAntimony(current=True)
                         rnd_rl[l] = rl
-                        rl_track.append(rl)
+                        stt_track.append(st.tolist())
                         concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
                         concCC[np.abs(concCC) < 1e-8] = 0
                         rnd_concCC[l] = concCC
@@ -781,9 +772,10 @@ if __name__ == '__main__':
     ns = realNumBoundary + realNumFloating # Number of species
     nsList = np.arange(ns)
     nr = realRR.getNumReactions() # Number of reactions
-    nrList = np.argsort(np.sum(realConcCC, axis=0))#np.arange(nr)
+    nrList = np.arange(nr)
     
     ens_range = range(Settings.ens_size)
+    Settings.mut_size = int(Settings.ens_size/2)
     mut_range = range(Settings.mut_size)
     
     realCount = np.array(np.unravel_index(np.argsort(realFluxCC, axis=None), realFluxCC.shape)).T
@@ -823,7 +815,7 @@ if __name__ == '__main__':
         memory.append(process.memory_info().rss)
         
         # Initialize
-        ens_dist, ens_model, ens_rl, rl_track, ens_concCC = initialize(Settings)
+        ens_dist, ens_model, ens_rl, stt_track, ens_concCC = initialize(Settings)
         
         memory.append(process.memory_info().rss)
         
@@ -855,15 +847,8 @@ if __name__ == '__main__':
         # TODO: Add polishing with fast optimizer 
         while not terminate:
             minind = np.argsort(ens_dist)[:Settings.pass_size]
-            tarind = np.delete(ens_idx, minind)
-            mut_p = 1/ens_dist[tarind]/np.sum(1/ens_dist[tarind])
-            mut_ind = np.random.choice(tarind, 
-                                       size=Settings.mut_size-Settings.pass_size, 
-                                       replace=False, p=mut_p)
-            mut_ind = np.append(mut_ind, minind)
             
-            g1 = np.random.choice(ens_idx, 
-                                  size=int(Settings.ens_size/2), 
+            g1 = np.random.choice(ens_idx, size=int(Settings.ens_size/2), 
                                   replace=False)
             g2 = np.delete(ens_idx, g1)
             
@@ -986,7 +971,7 @@ if __name__ == '__main__':
             
             if Settings.EXPORT_OUTPUT:
                 ioutils.exportOutputs(model_col, dist_col, [best_dist, avg_dist, med_dist, top_dist], 
-                                      Settings, t2-t1, rl_track, n, path=Settings.EXPORT_PATH)
+                                      Settings, t2-t1, stt_track, n, path=Settings.EXPORT_PATH)
 
         
     roadrunner.Config.setValue(roadrunner.Config.PYTHON_ENABLE_NAMED_MATRIX, 1)
