@@ -5,12 +5,10 @@ CCR plotting module
 Kiri Choi (c) 2018
 """
 
-import os, sys
+import os
 import tellurium as te
-import roadrunner
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sb
 
 
 def plotAllProgress(listOfDistances, labels=None, SAVE_PATH=None):
@@ -215,10 +213,15 @@ def plotConcCC(model, SAVE_PATH=None):
     except:
         raise Exception("Cannot calculate control coefficients")
                 
-    fig = plt.figure(figsize=(6,4))
-    plt.imshow(concCC, interpolation='none', cmap='RdBu')
-    plt.yticks(np.arange(np.shape(concCC)[0]), concCC.rownames)
-    plt.xticks(np.arange(np.shape(concCC)[1]), concCC.colnames)
+    fig, ax = plt.subplots(figsize=(6,4))
+    im = ax.imshow(concCC, interpolation='none', cmap='RdBu')
+    ax.set_yticks(np.arange(np.shape(concCC)[0]), concCC.rownames)
+    ax.xaxis.tick_top()
+    ax.set_xticks(np.arange(np.shape(concCC)[1]), concCC.colnames)
+    
+    for i in range(concCC.shape[0]):
+        for j in range(concCC.shape[1]):
+            text = ax.text(j, i, '{:.2f}'.format(concCC[i,j]), ha="center", va="center", color="k")
     
     if SAVE_PATH is not None:
         if os.path.splitext(SAVE_PATH)[1] == '':

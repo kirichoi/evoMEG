@@ -6,7 +6,6 @@ Kiri Choi (c) 2018
 """
 
 import tellurium as te
-import roadrunner
 import numpy as np
 from scipy import signal
 from sklearn import neighbors

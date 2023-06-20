@@ -5,7 +5,7 @@ Created on Mon Oct 29 17:18:02 2018
 @author: ckiri
 """
 
-import sys, os
+import os
 import numpy as np
 import pandas as pd
 
