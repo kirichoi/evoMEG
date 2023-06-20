@@ -54,7 +54,7 @@ class SettingsClass:
         # Top percentage of population to track (default: 0.05)
         self.top_p = 0.05
         # Maximum iteration allowed for random generation (default: 100)
-        self.maxIter_gen = 500
+        self.maxIter_gen = 100
         # Maximum iteration allowed for mutation (default: 100)
         self.maxIter_mut = 100
         # Recombination probability (default: 0.3)
@@ -123,7 +123,7 @@ class SettingsClass:
         # Flag to save current settings
         self.EXPORT_SETTINGS = True
         # Path to save the output
-        self.EXPORT_PATH = './outputs_new/test2'
+        self.EXPORT_PATH = './outputs_new/stt_track'
         
         # Flag to run the algorithm - temporary
         self.RUN = True
@@ -269,17 +269,16 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
         
         minrndidx = np.random.choice(minind)
         
-        stt = np.zeros((2,2))
+        # stt = np.zeros((2,2))
         fid = []
         bid = []
-        st = stt_track[0]
+        stt = stt_track[0]
         
         o = 0
         
         while ((fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList 
-                or st[realFloatingIdsIndSortList].tolist() in stt_track or np.sum(stt) != 0 
-                or len(check_duplicate_reaction(stt)) > 0 
-                or np.linalg.matrix_rank(stt) != realNumFloating) 
+                or stt.tolist() in stt_track or np.sum(stt) != 0 
+                or len(check_duplicate_reaction(stt)) > 0 or np.linalg.matrix_rank(stt) != realNumFloating) 
                and (o < Settings.maxIter_mut)):
             r_idx = np.random.choice(np.arange(nr), p=np.divide(tempdiff, np.sum(tempdiff)))
             
@@ -466,7 +465,7 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
                             eval_dist[m] = res.fun
                             eval_model[m] = r.getAntimony(current=True)
                             eval_rl[m] = reactionList
-                            stt_track.append(st.tolist())
+                            stt_track.append(stt.tolist())
                             eval_concCC[m] = concCC
                     else:
                         eval_dist[m] = mut_dist[m]
@@ -513,7 +512,7 @@ def initialize(Settings):
         stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
         # Ensure no redundant model
         while (fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList
-               or st[realFloatingIdsIndSortList].tolist() in stt_track or np.sum(stt) != 0 
+               or stt.tolist() in stt_track or np.sum(stt) != 0 
                or np.linalg.matrix_rank(stt) != realNumFloating):
             rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
                                          realBoundaryIdsIndSort, realConcCC)
@@ -543,7 +542,7 @@ def initialize(Settings):
                 ens_dist[numGoodModels] = res.fun
                 ens_model[numGoodModels] = r.getAntimony(current=True)
                 ens_rl[numGoodModels] = rl
-                stt_track.append(st.tolist())
+                stt_track.append(stt.tolist())
                 concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
                 concCC[np.abs(concCC) < 1e-8] = 0
                 ens_concCC[numGoodModels] = concCC
@@ -598,7 +597,7 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv, Settings):
         stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
         # Ensure no redundant models
         while ((fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList or 
-                st[realFloatingIdsIndSortList].tolist() in stt_track or np.sum(stt) != 0 or 
+                stt.tolist() in stt_track or np.sum(stt) != 0 or 
                 np.linalg.matrix_rank(stt) != realNumFloating) and (d < Settings.maxIter_gen)):
             rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
                                          realBoundaryIdsIndSort, realConcCC)
@@ -641,7 +640,7 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv, Settings):
                         rnd_dist[l] = res.fun
                         rnd_model[l] = r.getAntimony(current=True)
                         rnd_rl[l] = rl
-                        stt_track.append(st.tolist())
+                        stt_track.append(stt.tolist())
                         concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
                         concCC[np.abs(concCC) < 1e-8] = 0
                         rnd_concCC[l] = concCC

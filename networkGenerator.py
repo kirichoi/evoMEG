@@ -240,7 +240,7 @@ def generateReactionList(nsList, nrList, realFloatingIdsIndSort, realBoundaryIds
 # Returns a list:
 # [New Stoichiometry matrix, list of floatingIds, list of boundaryIds]
 def getFullStoichiometryMatrix(reactionList, ns):
-    reactionListCopy = reactionList#copy.deepcopy(reactionList)
+    reactionListCopy = reactionList
     st = np.zeros((ns, len(reactionListCopy)), dtype=int)
     
     for index, rind in enumerate(reactionListCopy):
@@ -310,8 +310,8 @@ def removeBoundaryNodes(st, nsList, nrList):
             countBoundarySpecies = countBoundarySpecies + 1
 
     floatingIds = np.delete(nsList, indexes+orphanSpecies, axis=0).astype(int)
-
     boundaryIds = indexes
+    
     rsm = st[floatingIds]
     rsm[rsm>1] = 1
     rsm[rsm<-1] = -1
@@ -452,7 +452,7 @@ def generateSimpleRateLaw(rl, Jind):
 
 
 def generateAntimony(floatingIds, boundaryIds, stt1, stt2, reactionList, boundary_init=None):
-    reactionListCopy = reactionList#copy.deepcopy(reactionList)
+    reactionListCopy = reactionList
     Klist = []
     
     real = np.append(floatingIds, boundaryIds)
