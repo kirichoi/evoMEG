@@ -15,7 +15,6 @@ import networkGenerator as ng
 import plotting as pt
 import ioutils
 import analysis
-# import matplotlib.pyplot as plt
 import time
 import copy
 
@@ -54,9 +53,9 @@ class SettingsClass:
         # Top percentage of population to track (default: 0.05)
         self.top_p = 0.05
         # Maximum iteration allowed for random generation (default: 100)
-        self.maxIter_gen = 100
+        self.maxIter_gen = 200
         # Maximum iteration allowed for mutation (default: 100)
-        self.maxIter_mut = 100
+        self.maxIter_mut = 200
         # Recombination probability (default: 0.3)
         self.recomb = 0.3
         # Set conserved moiety (default: False)
@@ -123,14 +122,14 @@ class SettingsClass:
         # Flag to save current settings
         self.EXPORT_SETTINGS = True
         # Path to save the output
-        self.EXPORT_PATH = './outputs_new/stt_track'
+        self.EXPORT_PATH = './outputs_stt_track/FFL_m_hh'
         
         # Flag to run the algorithm - temporary
-        self.RUN = True
+        self.RUN = False
 
 
 def customGetScaledConcentrationControlCoefficientMatrix(r):
-    '''
+    """
     Numpy implementation of GetScaledConcentrationControlCoefficientMatrix()
     that does not force run steadyState()
     
@@ -143,8 +142,7 @@ def customGetScaledConcentrationControlCoefficientMatrix(r):
     -------
     T4 : numpy.ndarray
         Scale concentration control coefficient matrix.
-
-    '''
+    """
     
     re = r.simulate(0, 10000, 5)
     r.steadyState()
@@ -945,19 +943,20 @@ if __name__ == '__main__':
             if not os.path.exists(Settings.EXPORT_PATH):
                 os.makedirs(Settings.EXPORT_PATH)
         
-        if Settings.SHOW_PLOT:
-            if Settings.SAVE_PLOT:
-                if not os.path.exists(Settings.EXPORT_PATH):
-                    os.mkdir(Settings.EXPORT_PATH)
-                if not os.path.exists(os.path.join(Settings.EXPORT_PATH, 'images')):
-                    os.mkdir(os.path.join(Settings.EXPORT_PATH, 'images'))
-                pt.plotAllProgress([best_dist, avg_dist, med_dist, top_dist], 
-                                   labels=['Best', 'Avg', 'Median', 'Top {} percent'.format(int(Settings.top_p*100))],
-                                   SAVE_PATH=os.path.join(Settings.EXPORT_PATH, 'images/AllConvergences.pdf'))
-                pt.plotMemoryUsage(memory, SAVE_PATH=os.path.join(Settings.EXPORT_PATH, 'images/memoryUsage.pdf'))
-                pt.plotDistanceHistogramWithKDE(kdeOutput, dist_top, 
-                                                SAVE_PATH=os.path.join(Settings.EXPORT_PATH, 'images/distance_hist_w_KDE.pdf'))
-            else:
+        if Settings.SAVE_PLOT:
+            if not os.path.exists(Settings.EXPORT_PATH):
+                os.mkdir(Settings.EXPORT_PATH)
+            if not os.path.exists(os.path.join(Settings.EXPORT_PATH, 'images')):
+                os.mkdir(os.path.join(Settings.EXPORT_PATH, 'images'))
+            pt.plotAllProgress([best_dist, avg_dist, med_dist, top_dist], show=Settings.SHOW_PLOT,
+                               labels=['Best', 'Avg', 'Median', 'Top {} percent'.format(int(Settings.top_p*100))],
+                               SAVE_PATH=os.path.join(Settings.EXPORT_PATH, 'images/AllConvergences.pdf'))
+            pt.plotMemoryUsage(memory, show=Settings.SHOW_PLOT,
+                               SAVE_PATH=os.path.join(Settings.EXPORT_PATH, 'images/memoryUsage.pdf'))
+            pt.plotDistanceHistogramWithKDE(kdeOutput, dist_top, show=Settings.SHOW_PLOT,
+                                            SAVE_PATH=os.path.join(Settings.EXPORT_PATH, 'images/distance_hist_w_KDE.pdf'))
+        else:
+            if Settings.SHOW_PLOT:
                 pt.plotAllProgress([best_dist, avg_dist, med_dist, top_dist], 
                                    labels=['Best', 'Avg', 'Median', 'Top {} percent'.format(int(Settings.top_p*100))])
                 pt.plotMemoryUsage(memory)

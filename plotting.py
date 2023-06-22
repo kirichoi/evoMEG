@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def plotAllProgress(listOfDistances, labels=None, SAVE_PATH=None):
+def plotAllProgress(listOfDistances, labels=None, show=True, SAVE_PATH=None):
     """
     Plots multiple distance progressions 
     
@@ -33,9 +33,14 @@ def plotAllProgress(listOfDistances, labels=None, SAVE_PATH=None):
             plt.savefig(os.path.join(SAVE_PATH, 'images/convergence.pdf'), bbox_inches='tight')
         else:
             plt.savefig(SAVE_PATH, bbox_inches='tight')
-    plt.show()
+    
+    if show:
+        plt.show()
+    else:
+        plt.close()
+        
 
-def plotProgress(distance, SAVE_PATH=None):
+def plotProgress(distance, show=True, SAVE_PATH=None):
     """
     Plots a distance progression
     
@@ -54,9 +59,13 @@ def plotProgress(distance, SAVE_PATH=None):
             plt.savefig(os.path.join(SAVE_PATH, 'images/convergence.pdf'), bbox_inches='tight')
         else:
             plt.savefig(SAVE_PATH, bbox_inches='tight')
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
+        
 
-def plotResidual(realModel, ens_model, ens_dist, SAVE_PATH=None):
+def plotResidual(realModel, ens_model, ens_dist, show=True, SAVE_PATH=None):
     """
     Plots residuals
     
@@ -94,9 +103,13 @@ def plotResidual(realModel, ens_model, ens_dist, SAVE_PATH=None):
             plt.savefig(os.path.join(SAVE_PATH, 'images/average_residual.pdf'), bbox_inches='tight')
         else:
             plt.savefig(SAVE_PATH, bbox_inches='tight')
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
+        
     
-def plotDistanceHistogram(ens_dist, nbin=25, SAVE_PATH=None):
+def plotDistanceHistogram(ens_dist, nbin=25, show=True, SAVE_PATH=None):
     """
     """
     
@@ -110,9 +123,13 @@ def plotDistanceHistogram(ens_dist, nbin=25, SAVE_PATH=None):
             plt.savefig(os.path.join(SAVE_PATH, 'images/distance_hist.pdf'), bbox_inches='tight')
         else:
             plt.savefig(SAVE_PATH, bbox_inches='tight')
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
+        
 
-def plotDistanceHistogramWithKDE(kdeOutput, dist_top, nbin=40, SAVE_PATH=None):
+def plotDistanceHistogramWithKDE(kdeOutput, dist_top, nbin=40, show=True, SAVE_PATH=None):
     """
     """
     
@@ -130,7 +147,11 @@ def plotDistanceHistogramWithKDE(kdeOutput, dist_top, nbin=40, SAVE_PATH=None):
             plt.savefig(os.path.join(SAVE_PATH, 'images/distance_hist_w_KDE.pdf'), bbox_inches='tight')
         else:
             plt.savefig(SAVE_PATH, bbox_inches='tight')
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
+        
 
 def plotNetwork(path, scale=1.5):
     """
@@ -147,7 +168,7 @@ def plotNetwork(path, scale=1.5):
     net.draw()
 
 
-def plotMemoryUsage(memory, SAVE_PATH=None):
+def plotMemoryUsage(memory, show=True, SAVE_PATH=None):
     """
     Plot memory usage
 
@@ -166,7 +187,11 @@ def plotMemoryUsage(memory, SAVE_PATH=None):
             plt.savefig(os.path.join(SAVE_PATH, 'images/memoryUsage.pdf'), bbox_inches='tight')
         else:
             plt.savefig(SAVE_PATH, bbox_inches='tight')
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
+        
 
 def plotNetworkEnsemble(path, index=None, threshold=0., scale=1.5):
     """
@@ -198,7 +223,8 @@ def plotNetworkEnsemble(path, index=None, threshold=0., scale=1.5):
     net.scale = scale
     net.drawWeightedDiagram()
 
-def plotConcCC(model, SAVE_PATH=None):
+
+def plotConcCC(model, show=True, SAVE_PATH=None):
     
     try:
         r = te.loada(model)
@@ -228,6 +254,9 @@ def plotConcCC(model, SAVE_PATH=None):
             plt.savefig(os.path.join(SAVE_PATH, 'images/controlCoeff.pdf'), bbox_inches='tight')
         else:
             plt.savefig(SAVE_PATH, bbox_inches='tight')
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
     
     
