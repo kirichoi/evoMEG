@@ -6,6 +6,7 @@ Created on Mon Oct 29 17:18:02 2018
 """
 
 import os
+import warnings
 import numpy as np
 import pandas as pd
 
@@ -121,7 +122,7 @@ def readSettings(Settings):
             else:
                 Settings.__setattr__(sp[0], sp[1])
         except:
-            pass
+            warnings.warn("Setting {} is not valid and was ignored".format(s))
     
 
 def readModels(modelsPath):
