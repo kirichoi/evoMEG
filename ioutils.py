@@ -53,7 +53,7 @@ def exportSettings(Settings, path=None):
     outputtxt.close()
     
     
-def exportOutputs(models, dists, dist_list, Settings, time, rl_track, n, path=None):
+def exportOutputs(models, dists, dist_list, Settings, time, stt_track, n, path=None):
     """
     Export all outputs to a specified path
         
@@ -80,6 +80,9 @@ def exportOutputs(models, dists, dist_list, Settings, time, rl_track, n, path=No
                                  'generation top {}'.format(int(Settings.top_p*100))])
     stat.to_csv(os.path.join(outputdir, 'dist_stat.txt'))
     
+    stt_track_arr = np.array(stt_track)
+    np.save(os.path.join(outputdir, 'stt_track.npy'), stt_track_arr, allow_pickle=True)
+    
     outputtxt = open(os.path.join(outputdir, 'report.txt'), 'w')
     outputtxt.writelines('------------------------- REPORT -------------------------\n')
     outputtxt.writelines('RUN COMPLETE. HERE ARE SOME METRIC YOU MIGHT BE INTERESTED\n')
@@ -87,7 +90,7 @@ def exportOutputs(models, dists, dist_list, Settings, time, rl_track, n, path=No
     outputtxt.writelines('Ensemble Size: {}'.format(Settings.ens_size) + '\n')
     outputtxt.writelines('No. of Collected Models: {}'.format(len(models)) + '\n')
     outputtxt.writelines('Run Time: {:.2f}'.format(time) + ' s\n')
-    outputtxt.writelines('No. Stoich. Analyzed: {}'.format(len(rl_track)) + '\n')
+    outputtxt.writelines('No. Stoich. Analyzed: {}'.format(len(stt_track)) + '\n')
     outputtxt.close()
     
     for i in range(len(models)):
