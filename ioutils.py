@@ -5,11 +5,102 @@ Created on Mon Oct 29 17:18:02 2018
 @author: ckiri
 """
 
-import os
+import os, shutil
 import warnings
 import numpy as np
 import pandas as pd
 
+
+def exportPathHandler(Settings):
+    
+    if Settings.EXPORT_PATH != None:
+        if Settings.EXPORT_FORCE_MODELNAMES:
+            if Settings.MODEL_INPUT != None:
+                fname = os.path.basename(Settings.MODEL_INPUT).split('.')[0]
+            else:
+                fname = Settings.modelType
+            path = os.path.join(Settings.EXPORT_PATH, fname)
+            path = os.path.abspath(os.path.join(os.getcwd(), path))
+        else:
+            path = os.path.abspath(os.path.join(os.getcwd(), Settings.EXPORT_PATH))
+    else:
+        if Settings.MODEL_INPUT != None:
+            fname = os.path.basename(Settings.MODEL_INPUT).split('.')[0]
+            path = os.path.abspath(os.path.join(os.getcwd(), fname))
+        else:
+            path = os.path.abspath(os.path.join(os.getcwd(), 'evoMEG_output'))
+    
+    
+    if (Settings.SAVE_PLOT or Settings.EXPORT_SETTINGS or Settings.EXPORT_OUTPUT 
+        or Settings.EXPORT_ALL_MODELS):
+        try:
+            if Settings.EXPORT_OVERWRITE:
+                if not os.path.exists(path):
+                    os.makedirs(path)
+                else:
+                    shutil.rmtree(path)
+                    os.makedirs(path)
+            else:
+                if not os.path.exists(path):
+                    os.makedirs(path)
+                else:
+                    f, ext = os.path.splitext(path)
+                    counter = 0
+                    while os.path.exists(path):
+                        path = f + "_" + str(counter) + ext
+                        counter += 1
+                    os.makedirs(path)
+        except:
+            raise Exception('Failed to create the output directory')
+                
+            
+    return path
+
+
+def validateSettings(Settings):
+    """
+    Validate the Settings parameters
+    """
+    
+    assert(isinstance(Settings.MODEL_INPUT, str) or Settings.MODEL_INPUT == None), 'Invalid MODEL_INPUT'
+    assert(isinstance(Settings.DATA_INPUT, str) or Settings.DATA_INPUT == None), 'Invalid DATA_INPUT'
+    assert(isinstance(Settings.READ_SETTINGS, str) or Settings.READ_SETTINGS == None), 'Invalid READ_SETTINGS'
+    
+    assert(isinstance(Settings.ens_size, int)), 'Invalid ens_size'
+    assert(isinstance(Settings.pass_size, int)), 'Invalid pass_size'
+    assert(isinstance(Settings.top_p, float) and Settings.top_p<=1), 'Invalid top_p'
+    assert(isinstance(Settings.maxIter_gen, int)), 'Invalid maxIter_gen'
+    assert(isinstance(Settings.maxIter_mut, int)), 'Invalid maxIter_mut'
+    assert(isinstance(Settings.recomb, float) and Settings.recomb<=1), 'Invalid recomb'
+    
+    
+    assert(isinstance(Settings.n_gen, int) or Settings.n_gen == None), 'Invalid n_gen'
+    assert(isinstance(Settings.gen_static, int) or Settings.thres_avg == None), 'Invalid thres_avg'
+    assert(isinstance(Settings.thres_avg, (int, float)) or Settings.thres_avg == None), 'Invalid thres_avg'
+    assert(isinstance(Settings.thres_median, (int, float)) or Settings.thres_median == None), 'Invalid thres_median'
+    assert(isinstance(Settings.thres_shortest, (int, float)) or Settings.thres_shortest == None), 'Invalid thres_shortest'
+    assert(isinstance(Settings.thres_top, (int, float)) or Settings.thres_top == None), 'Invalid thres_top'
+    assert([Settings.n_gen, Settings.gen_static, Settings.thres_avg, Settings.thres_median,
+            Settings.thres_shortest, Settings.thres_top] != [None, None, None, None, None, None]), 'No termination condition given'
+    
+    assert(isinstance(Settings.optiMaxIter, int)), 'Invalid optiMaxIter'
+    assert(isinstance(Settings.optiTol, (int, float))), 'Invalid optiTol'
+    assert(isinstance(Settings.optiPolish, bool)), 'Invalid optiPolish'
+    
+    assert(isinstance(Settings.r_seed, int)), 'Invalid r_seed'
+    assert(isinstance(Settings.NOISE, bool)), 'Invalid NOISE'
+    assert(isinstance(Settings.ABS_NOISE_STD, (int, float))), 'Invalid ABS_NOISE_STD'
+    assert(isinstance(Settings.REL_NOISE_STD, (int, float))), 'Invalid REL_NOISE_STD'
+    
+    assert(isinstance(Settings.SHOW_PLOT, bool)), 'Invalid SHOW_PLOT'
+    assert(isinstance(Settings.SAVE_PLOT, bool)), 'Invalid SAVE_PLOT'
+    assert(isinstance(Settings.EXPORT_ALL_MODELS, bool)), 'Invalid EXPORT_ALL_MODELS'
+    assert(isinstance(Settings.EXPORT_SETTINGS, bool)), 'Invalid EXPORT_SETTINGS'
+    assert(isinstance(Settings.EXPORT_PATH, str) or Settings.EXPORT_PATH == None), 'Invalid EXPORT_PATH'
+    assert(isinstance(Settings.EXPORT_OVERWRITE, bool)), 'Invalid EXPORT_OVERWRITE'
+    assert(isinstance(Settings.EXPORT_FORCE_MODELNAMES, bool)), 'Invalid EXPORT_FORCE_MODELNAMES'
+    
+    
 def exportSettings(Settings, path=None):
     """
     Export all settings to a specified path
@@ -125,7 +216,12 @@ def readSettings(Settings):
             elif sp[1] == 'None':
                 Settings.__setattr__(sp[0], None)
             else:
-                Settings.__setattr__(sp[0], sp[1])
+                if isinstance(sp[1], str):
+                    s = sp[1].strip("'")
+                    s = s.strip('"')
+                    Settings.__setattr__(sp[0], s)
+                else:
+                    Settings.__setattr__(sp[0], sp[1])
         except:
             warnings.warn("Setting {} is not valid and was ignored".format(s))
     
@@ -718,6 +814,6 @@ def testModels(modelType):
         S4 = 1
         """
     else:
-        raise Exception("Requested model not found")
+        raise Exception("Requested test model not found")
         
     return realModel

@@ -40,7 +40,7 @@ class SettingsClass:
             
         # 'FFL_m', 'Linear_m', 'Nested_m', 'Branched_m', 'Feedback_m', 'sigPath'
         # 'FFL_r', 'Linear_r', 'Nested_r', 'Branched_r', 'Feedback_r'
-        self.modelType = 'FFL_m'
+        self.modelType = 'Nested_m'
         
         
         # General settings ====================================================
@@ -123,6 +123,11 @@ class SettingsClass:
         self.EXPORT_SETTINGS = True
         # Path to save the output
         self.EXPORT_PATH = './outputs_stt_track/FFL_m_hh'
+        # Overwrite the contents if the folder exists
+        self.EXPORT_OVERWRITE = False
+        # Create folders based on model names
+        self.EXPORT_FORCE_MODELNAMES = False
+        
         
         # Flag to run the algorithm - temporary
         self.RUN = False
@@ -690,9 +695,16 @@ if __name__ == '__main__':
     if Settings.READ_SETTINGS != None:
         ioutils.readSettings(Settings)
     
+    ioutils.validateSettings(Settings)
+    
+    Settings.EXPORT_PATH = ioutils.exportPathHandler(Settings)
+    
 #%% Analyze True Model
     roadrunner.Logger.disableLogging()
     # roadrunner.Config.setValue(roadrunner.Config.ROADRUNNER_DISABLE_WARNINGS, 3)
+    
+    # Restore
+    rr_nmval = roadrunner.Config.getValue(roadrunner.Config.PYTHON_ENABLE_NAMED_MATRIX)
 
     # if conservedMoiety:
     #     roadrunner.Config.setValue(roadrunner.Config.LOADSBMLOPTIONS_CONSERVED_MOIETIES, True)
@@ -937,11 +949,7 @@ if __name__ == '__main__':
             dist_col = dist_top[:kdeOutput[0][0]]
             
 #%%
-        Settings.EXPORT_PATH = os.path.abspath(os.path.join(os.getcwd(), Settings.EXPORT_PATH))
-        if (Settings.SAVE_PLOT or Settings.EXPORT_SETTINGS or 
-            Settings.EXPORT_OUTPUT or Settings.EXPORT_ALL_MODELS):
-            if not os.path.exists(Settings.EXPORT_PATH):
-                os.makedirs(Settings.EXPORT_PATH)
+        # Settings.EXPORT_PATH = os.path.abspath(os.path.join(os.getcwd(), Settings.EXPORT_PATH))
         
         if Settings.SAVE_PLOT:
             if not os.path.exists(Settings.EXPORT_PATH):
@@ -971,5 +979,6 @@ if __name__ == '__main__':
                 ioutils.exportOutputs(model_col, dist_col, [best_dist, avg_dist, med_dist, top_dist], 
                                       Settings, t2-t1, stt_track, n, path=Settings.EXPORT_PATH)
 
-        
-    roadrunner.Config.setValue(roadrunner.Config.PYTHON_ENABLE_NAMED_MATRIX, 1)
+    
+    # Restore config
+    roadrunner.Config.setValue(roadrunner.Config.PYTHON_ENABLE_NAMED_MATRIX, rr_nmval)
