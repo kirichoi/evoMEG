@@ -122,6 +122,8 @@ def readSettings(Settings):
                 Settings.__setattr__(sp[0], True)
             elif sp[1] == 'False':
                 Settings.__setattr__(sp[0], False)
+            elif sp[1] == 'None':
+                Settings.__setattr__(sp[0], None)
             else:
                 Settings.__setattr__(sp[0], sp[1])
         except:
