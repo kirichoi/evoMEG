@@ -12,6 +12,12 @@ import pandas as pd
 
 
 def exportPathHandler(Settings):
+    """
+    Generate export path
+    
+    :param Settings: Settings class
+    :return path: absolute export path
+    """
     
     if Settings.EXPORT_PATH != None:
         if Settings.EXPORT_FORCE_MODELNAMES:
@@ -52,7 +58,6 @@ def exportPathHandler(Settings):
                     os.makedirs(path)
         except:
             raise Exception('Failed to create the output directory')
-                
             
     return path
 
@@ -60,6 +65,8 @@ def exportPathHandler(Settings):
 def validateSettings(Settings):
     """
     Validate the Settings parameters
+    
+    :param Settings: Settings class
     """
     
     assert(isinstance(Settings.MODEL_INPUT, str) or Settings.MODEL_INPUT == None), 'Invalid MODEL_INPUT'
@@ -134,6 +141,7 @@ def exportSettings(Settings, path=None):
     outputtxt.writelines('maxIter_gen: {}'.format(Settings.maxIter_gen) + '\n')
     outputtxt.writelines('maxIter_mut: {}'.format(Settings.maxIter_mut) + '\n')
     outputtxt.writelines('recomb: {}'.format(Settings.recomb) + '\n')
+    outputtxt.writelines('trackStoichiometry: {}'.format(Settings.trackStoichiometry) + '\n')
     outputtxt.writelines('optiMaxIter: {}'.format(Settings.optiMaxIter) + '\n')
     outputtxt.writelines('optiTol: {}'.format(Settings.optiTol) + '\n')
     outputtxt.writelines('optiPolish: {}'.format(Settings.optiPolish) + '\n')
@@ -144,7 +152,7 @@ def exportSettings(Settings, path=None):
     outputtxt.close()
     
     
-def exportOutputs(models, dists, dist_list, Settings, time, stt_track, n, path=None):
+def exportOutputs(models, dists, dist_list, Settings, time, tracking, n, path=None):
     """
     Export all outputs to a specified path
         
@@ -171,8 +179,12 @@ def exportOutputs(models, dists, dist_list, Settings, time, stt_track, n, path=N
                                  'generation top {}'.format(int(Settings.top_p*100))])
     stat.to_csv(os.path.join(outputdir, 'dist_stat.txt'))
     
-    stt_track_arr = np.array(stt_track)
-    np.save(os.path.join(outputdir, 'stt_track.npy'), stt_track_arr, allow_pickle=True)
+    if Settings.trackStoichiometry:
+        tracking_arr = np.array(tracking)
+        np.save(os.path.join(outputdir, 'tracking.npy'), tracking_arr, allow_pickle=True)
+    else:
+        tracking_arr = np.array(tracking, dtype=object)
+        np.save(os.path.join(outputdir, 'tracking.npy'), tracking_arr, allow_pickle=True)
     
     outputtxt = open(os.path.join(outputdir, 'report.txt'), 'w')
     outputtxt.writelines('------------------------- REPORT -------------------------\n')
@@ -181,7 +193,7 @@ def exportOutputs(models, dists, dist_list, Settings, time, stt_track, n, path=N
     outputtxt.writelines('Ensemble Size: {}'.format(Settings.ens_size) + '\n')
     outputtxt.writelines('No. of Collected Models: {}'.format(len(models)) + '\n')
     outputtxt.writelines('Run Time: {:.2f}'.format(time) + ' s\n')
-    outputtxt.writelines('No. Stoich. Analyzed: {}'.format(len(stt_track)) + '\n')
+    outputtxt.writelines('No. Stoich. Analyzed: {}'.format(len(tracking)) + '\n')
     outputtxt.close()
     
     for i in range(len(models)):

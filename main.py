@@ -40,7 +40,7 @@ class SettingsClass:
             
         # 'FFL_m', 'Linear_m', 'Nested_m', 'Branched_m', 'Feedback_m', 'sigPath'
         # 'FFL_r', 'Linear_r', 'Nested_r', 'Branched_r', 'Feedback_r'
-        self.modelType = 'Nested_m'
+        self.modelType = 'FFL_m'
         
         
         # General settings ====================================================
@@ -52,12 +52,14 @@ class SettingsClass:
         self.pass_size = int(self.ens_size/10)
         # Top percentage of population to track (default: 0.05)
         self.top_p = 0.05
-        # Maximum iteration allowed for random generation (default: 100)
+        # Maximum iteration allowed for random generation (default: 200)
         self.maxIter_gen = 200
-        # Maximum iteration allowed for mutation (default: 100)
+        # Maximum iteration allowed for mutation (default: 200)
         self.maxIter_mut = 200
         # Recombination probability (default: 0.3)
         self.recomb = 0.3
+        # Track stoichiometry instead of reaction lists
+        self.trackStoichiometry = True
         # Set conserved moiety (default: False)
         self.conservedMoiety = False
         
@@ -122,7 +124,7 @@ class SettingsClass:
         # Flag to save current settings
         self.EXPORT_SETTINGS = True
         # Path to save the output
-        self.EXPORT_PATH = './outputs_stt_track/FFL_m_hh'
+        self.EXPORT_PATH = './outputs/stoi'
         # Overwrite the contents if the folder exists
         self.EXPORT_OVERWRITE = False
         # Create folders based on model names
@@ -252,7 +254,7 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
 
     global countf
     global counts
-    global stt_track
+    global tracking
     
     eval_dist = np.empty(Settings.mut_size)
     eval_model = np.empty(Settings.mut_size, dtype='object')
@@ -275,14 +277,13 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
         # stt = np.zeros((2,2))
         fid = []
         bid = []
-        stt = stt_track[0]
+        # stt = tracking[0]
         
         o = 0
         
-        while ((fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList 
-                or stt.tolist() in stt_track or np.sum(stt) != 0 
-                or len(check_duplicate_reaction(stt)) > 0 or np.linalg.matrix_rank(stt) != realNumFloating) 
-               and (o < Settings.maxIter_mut)):
+        mutate_condition = True
+        
+        while mutate_condition:
             r_idx = np.random.choice(np.arange(nr), p=np.divide(tempdiff, np.sum(tempdiff)))
             
             reactionList = copy.deepcopy(mut_rl[m])
@@ -424,6 +425,24 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
             st = ng.getFullStoichiometryMatrix(reactionList, ns)
             stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
             o += 1
+            
+            if Settings.trackStoichiometry:
+                if ((fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList 
+                     or stt.tolist() in tracking or np.sum(stt) != 0 
+                     or len(check_duplicate_reaction(stt)) > 0 or np.linalg.matrix_rank(stt) != realNumFloating) 
+                    and (o < Settings.maxIter_mut)):
+                    mutate_condition = True
+                else:
+                    mutate_condition = False
+            else:
+                if ((fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList 
+                     or reactionList in tracking or np.sum(stt) != 0 
+                     or len(check_duplicate_reaction(stt)) > 0 or np.linalg.matrix_rank(stt) != realNumFloating) 
+                    and (o < Settings.maxIter_mut)):
+                    mutate_condition = True
+                else:
+                    mutate_condition = False
+            
         
         if o >= Settings.maxIter_mut:
             eval_dist[m] = mut_dist[m]
@@ -468,7 +487,10 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
                             eval_dist[m] = res.fun
                             eval_model[m] = r.getAntimony(current=True)
                             eval_rl[m] = reactionList
-                            stt_track.append(stt.tolist())
+                            if Settings.trackStoichiometry:
+                                tracking.append(stt.tolist())
+                            else:
+                                tracking.append(reactionList)
                             eval_concCC[m] = concCC
                     else:
                         eval_dist[m] = mut_dist[m]
@@ -495,7 +517,7 @@ def initialize(Settings):
 
     global countf
     global counts
-    global stt_track
+    global tracking
     
     numBadModels = 0
     numGoodModels = 0
@@ -504,7 +526,7 @@ def initialize(Settings):
     ens_dist = np.empty(Settings.ens_size)
     ens_model = np.empty(Settings.ens_size, dtype='object')
     ens_rl = np.empty(Settings.ens_size, dtype='object')
-    stt_track = []
+    tracking = []
     ens_concCC = np.empty(Settings.ens_size, dtype='object')
     
     # Initial Random generation
@@ -514,13 +536,22 @@ def initialize(Settings):
         st = ng.getFullStoichiometryMatrix(rl, ns)
         stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
         # Ensure no redundant model
-        while (fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList
-               or stt.tolist() in stt_track or np.sum(stt) != 0 
-               or np.linalg.matrix_rank(stt) != realNumFloating):
-            rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
-                                         realBoundaryIdsIndSort, realConcCC)
-            st = ng.getFullStoichiometryMatrix(rl, ns)
-            stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
+        if Settings.trackStoichiometry:
+            while (fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList
+                   or stt.tolist() in tracking or np.sum(stt) != 0 
+                   or np.linalg.matrix_rank(stt) != realNumFloating):
+                rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
+                                             realBoundaryIdsIndSort, realConcCC)
+                st = ng.getFullStoichiometryMatrix(rl, ns)
+                stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
+        else:
+            while (fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList
+                   or rl in tracking or np.sum(stt) != 0 
+                   or np.linalg.matrix_rank(stt) != realNumFloating):
+                rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
+                                             realBoundaryIdsIndSort, realConcCC)
+                st = ng.getFullStoichiometryMatrix(rl, ns)
+                stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
         antStr = ng.generateAntimony(realFloatingIdsSort, realBoundaryIdsSort, 
                                      fid, bid, rl, boundary_init=realBoundaryVal)
 
@@ -545,7 +576,10 @@ def initialize(Settings):
                 ens_dist[numGoodModels] = res.fun
                 ens_model[numGoodModels] = r.getAntimony(current=True)
                 ens_rl[numGoodModels] = rl
-                stt_track.append(stt.tolist())
+                if Settings.trackStoichiometry:
+                    tracking.append(stt.tolist())
+                else:
+                    tracking.append(rl)
                 concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
                 concCC[np.abs(concCC) < 1e-8] = 0
                 ens_concCC[numGoodModels] = concCC
@@ -571,14 +605,14 @@ def initialize(Settings):
     print("Number of total iterations = {}".format(numIter))
     print("Number of bad models = {}".format(numBadModels))
     
-    return ens_dist, ens_model, ens_rl, stt_track, ens_concCC
+    return ens_dist, ens_model, ens_rl, tracking, ens_concCC
 
 
 def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv, Settings):
     
     global countf
     global counts
-    global stt_track
+    global tracking
     
     listAntStr = ens_model[mut_ind_inv]
     listDist = ens_dist[mut_ind_inv]
@@ -599,15 +633,26 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv, Settings):
         st = ng.getFullStoichiometryMatrix(rl, ns)
         stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
         # Ensure no redundant models
-        while ((fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList or 
-                stt.tolist() in stt_track or np.sum(stt) != 0 or 
-                np.linalg.matrix_rank(stt) != realNumFloating) and (d < Settings.maxIter_gen)):
-            rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
-                                         realBoundaryIdsIndSort, realConcCC)
-            st = ng.getFullStoichiometryMatrix(rl, ns)
-            stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
-            
-            d += 1
+        if Settings.trackStoichiometry:
+            while ((fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList or 
+                    stt.tolist() in tracking or np.sum(stt) != 0 or 
+                    np.linalg.matrix_rank(stt) != realNumFloating) and (d < Settings.maxIter_gen)):
+                rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
+                                             realBoundaryIdsIndSort, realConcCC)
+                st = ng.getFullStoichiometryMatrix(rl, ns)
+                stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
+                
+                d += 1
+        else:
+            while ((fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList or 
+                    rl in tracking or np.sum(stt) != 0 or 
+                    np.linalg.matrix_rank(stt) != realNumFloating) and (d < Settings.maxIter_gen)):
+                rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
+                                             realBoundaryIdsIndSort, realConcCC)
+                st = ng.getFullStoichiometryMatrix(rl, ns)
+                stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
+                
+                d += 1
         
         if d >= Settings.maxIter_gen:
             rnd_dist[l] = listDist[l]
@@ -643,7 +688,10 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv, Settings):
                         rnd_dist[l] = res.fun
                         rnd_model[l] = r.getAntimony(current=True)
                         rnd_rl[l] = rl
-                        stt_track.append(stt.tolist())
+                        if Settings.trackStoichiometry:
+                            tracking.append(stt.tolist())
+                        else:
+                            tracking.append(rl)
                         concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
                         concCC[np.abs(concCC) < 1e-8] = 0
                         rnd_concCC[l] = concCC
@@ -824,7 +872,7 @@ if __name__ == '__main__':
         memory.append(process.memory_info().rss)
         
         # Initialize
-        ens_dist, ens_model, ens_rl, stt_track, ens_concCC = initialize(Settings)
+        ens_dist, ens_model, ens_rl, tracking, ens_concCC = initialize(Settings)
         
         memory.append(process.memory_info().rss)
         
@@ -977,7 +1025,7 @@ if __name__ == '__main__':
             
             if Settings.EXPORT_OUTPUT:
                 ioutils.exportOutputs(model_col, dist_col, [best_dist, avg_dist, med_dist, top_dist], 
-                                      Settings, t2-t1, stt_track, n, path=Settings.EXPORT_PATH)
+                                      Settings, t2-t1, tracking, n, path=Settings.EXPORT_PATH)
 
     
     # Restore config
