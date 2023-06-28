@@ -993,8 +993,8 @@ if __name__ == '__main__':
             model_col = model_top
             dist_col = dist_top
         else:
-            model_col = model_top[:kdeOutput[0][0]]
-            dist_col = dist_top[:kdeOutput[0][0]]
+            model_col = model_top[:kdeOutput[0]]
+            dist_col = dist_top[:kdeOutput[0]]
             
 #%%
         # Settings.EXPORT_PATH = os.path.abspath(os.path.join(os.getcwd(), Settings.EXPORT_PATH))

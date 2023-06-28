@@ -148,23 +148,26 @@ def selectWithKernalDensity(model_top, dist_top):
     :param dist_top: list of sorted distances
     """
     
+    x = np.linspace(0, np.max(dist_top), int(np.max(dist_top)*10))
 
     dist_top_reshape = dist_top.reshape((len(dist_top),1))
     
-    kde_xarr = np.linspace(0, np.max(dist_top), int(np.max(dist_top)*10))[:, np.newaxis]
+    kde_xarr = x[:, np.newaxis]
     
     kde = neighbors.KernelDensity(kernel='gaussian', bandwidth=0.3).fit(dist_top_reshape)
     
     log_dens = kde.score_samples(kde_xarr)
     
-    minInd = signal.argrelextrema(log_dens, np.less)
+    extremaInd = signal.argrelextrema(log_dens, np.less)[0]
     
+    if len(extremaInd) == 0:
+        extremaInd = [len(x)-1]
     
+    dist = dist_top - x[extremaInd[0]]
     
-    if len(minInd[0]) == 0:
-        minInd = [[len(model_top)]]
+    minInd = np.where(dist <= 0)[0][-1]
     
-    return minInd[0], log_dens, kde_xarr.flatten()
+    return [minInd, log_dens, kde_xarr.flatten(), extremaInd[0]]
 
 
     

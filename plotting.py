@@ -134,8 +134,9 @@ def plotDistanceHistogramWithKDE(kdeOutput, dist_top, nbin=40, show=True, SAVE_P
     """
     
     x = np.linspace(0, np.max(dist_top), int(np.max(dist_top)*10))
+    
     hist = plt.hist(dist_top, bins=nbin, density=True)
-    plt.vlines(x[kdeOutput[0][0]], 0, np.max(hist[0]), 
+    plt.vlines(x[kdeOutput[3]], 0, np.max(hist[0]), 
                linestyles='dashed', color='tab:green')
     plt.plot(kdeOutput[2], np.exp(kdeOutput[1]), color='tab:red')
     plt.xlabel("Distance", fontsize=15)
