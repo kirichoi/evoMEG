@@ -130,7 +130,6 @@ def exportSettings(Settings, path=None):
         outputtxt.writelines('DATA_INPUT: {}'.format(Settings.DATA_INPUT) + '\n')
     outputtxt.writelines('ens_size: {}'.format(Settings.ens_size) + '\n')
     outputtxt.writelines('pass_size: {}'.format(Settings.pass_size) + '\n')
-    outputtxt.writelines('mut_size: {}'.format(Settings.mut_size) + '\n')
     outputtxt.writelines('top_p: {}'.format(Settings.top_p) + '\n')
     outputtxt.writelines('n_gen: {}'.format(Settings.n_gen) + '\n')
     outputtxt.writelines('gen_static: {}'.format(Settings.gen_static) + '\n')
