@@ -139,7 +139,7 @@ def selectWithCutoff(model_top, dist_top, cutoff=0.1):
     return model_top[:coind], dist_top[:coind]
 
 
-def selectWithKernalDensity(model_top, dist_top):
+def selectWithKernalDensity(dist_top):
     """
     Model selection rountine that returns a list of models based on the output
     of kernal density estimation.
