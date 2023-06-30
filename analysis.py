@@ -7,10 +7,6 @@ Kiri Choi (c) 2018
 
 import tellurium as te
 import numpy as np
-from scipy import signal
-from sklearn import neighbors
-import plotting as pt
-import networkx as nx
 
 
 def getWeights(dist):
@@ -105,6 +101,8 @@ def isConnected(rl):
     :param rl: reaction list
     """
     
+    import networkx as nx
+    
     G = nx.Graph()
     
     for i in range(len(rl)):
@@ -133,6 +131,8 @@ def selectWithCutoff(model_top, dist_top, cutoff=0.1):
     :param cutoff: percentage to cutoff
     """
     
+    import plotting as pt
+    
     coind = int(len(model_top)*cutoff)
     pt.plot_distance_histogram(dist_top, cutoff_val=dist_top[coind])
     
@@ -147,6 +147,9 @@ def selectWithKernalDensity(model_top, dist_top):
     :param model_top: list of models sorted according to corresponding distances
     :param dist_top: list of sorted distances
     """
+    
+    from scipy import signal
+    from sklearn import neighbors
     
     x = np.linspace(0, np.max(dist_top), int(np.max(dist_top)*10))
 

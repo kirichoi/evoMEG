@@ -166,6 +166,7 @@ def plotNetwork(path, scale=1.5):
     
     net = npl.Network(path)
     net.scale = scale
+    net.breakBoundary=True
     net.draw()
 
 
