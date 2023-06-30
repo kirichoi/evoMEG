@@ -87,8 +87,12 @@ class SettingsClass:
         self.optiMaxIter = 1000
         # Optimizer tolerance (default: 1)
         self.optiTol = 1.
-        # Run additional optimization at the end for polishing (default: False)
+        # Allow polishing parameters for optimizer (default: False)
         self.optiPolish = False
+        # Run additional optimization at the end for tighter fitness (default: False)
+        self.refine = False
+        # Tolerance for additional optimization at the end (default: 0.01)
+        self.refineTol = 0.01
         # Weight for control coefficients when calculating the distance - unused
         self.w1 = 16
         # Weight for steady-state and flux when calculating the distance - unused
@@ -110,19 +114,19 @@ class SettingsClass:
         # Plotting settings ===================================================
         
         # Flag to plot
-        self.SHOW_PLOT = True
+        self.SHOW_PLOT = False
         # Flag to save plot
-        self.SAVE_PLOT = True
+        self.SAVE_PLOT = False
         
         
         # Data settings =======================================================
             
         # Flag to collect all models in the ensemble
-        self.EXPORT_ALL_MODELS = True
+        self.EXPORT_ALL_MODELS = False
         # Flag to save collected models
-        self.EXPORT_OUTPUT = True
+        self.EXPORT_OUTPUT = False
         # Flag to save current settings
-        self.EXPORT_SETTINGS = True
+        self.EXPORT_SETTINGS = False
         # Path to save the output
         self.EXPORT_PATH = './outputs/stoi'
         # Overwrite the contents if the folder exists
@@ -132,7 +136,7 @@ class SettingsClass:
         
         
         # Flag to run the algorithm - temporary
-        self.RUN = False
+        self.RUN = True
 
 
 def customGetScaledConcentrationControlCoefficientMatrix(r):
@@ -992,8 +996,36 @@ if __name__ == '__main__':
         print("Run time: {}".format(t2-t1))
         
 #%%
+        if Settings.refine:
+            print("Refining")
+            for i,j in enumerate(ens_model):
+                try:
+                    r = te.loada(j)
+                    concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
+                    
+                    p_bound = ng.generateParameterBoundary(r.getGlobalParameterIds())
+                    res = scipy.optimize.differential_evolution(f1, args=(r,), 
+                                        bounds=p_bound, maxiter=Settings.optiMaxIter, 
+                                        tol=Settings.refineTol, polish=True, 
+                                        seed=Settings.r_seed)
+                    
+                    if res.success and res.fun < 1e6:
+                        r.resetToOrigin()
+                        r.setValues(r.getGlobalParameterIds(), res.x)
+                        ens_dist[i] = res.fun
+                        ens_model[i] = r.getAntimony(current=True)
+                except:
+                    pass
+            dist_top_ind = np.argsort(ens_dist)
+            dist_top = ens_dist[dist_top_ind]
+            model_top = ens_model[dist_top_ind]
+            
+            best_dist[-1] = dist_top[0]
+            avg_dist[-1] = np.average(dist_top)
+            med_dist[-1] = np.median(dist_top)
+            top_dist[-1] = np.average(np.unique(dist_top)[:top_ind])
+            
         # Collect models
-        
         kdeOutput = analysis.selectWithKernalDensity(model_top, dist_top)
         
         if Settings.EXPORT_ALL_MODELS:

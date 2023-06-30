@@ -80,7 +80,6 @@ def validateSettings(Settings):
     assert(isinstance(Settings.maxIter_mut, int)), 'Invalid maxIter_mut'
     assert(isinstance(Settings.recomb, float) and Settings.recomb<=1), 'Invalid recomb'
     
-    
     assert(isinstance(Settings.n_gen, int) or Settings.n_gen == None), 'Invalid n_gen'
     assert(isinstance(Settings.gen_static, int) or Settings.thres_avg == None), 'Invalid thres_avg'
     assert(isinstance(Settings.thres_avg, (int, float)) or Settings.thres_avg == None), 'Invalid thres_avg'
@@ -93,6 +92,8 @@ def validateSettings(Settings):
     assert(isinstance(Settings.optiMaxIter, int)), 'Invalid optiMaxIter'
     assert(isinstance(Settings.optiTol, (int, float))), 'Invalid optiTol'
     assert(isinstance(Settings.optiPolish, bool)), 'Invalid optiPolish'
+    assert(isinstance(Settings.refine, bool)), 'Invalid refine'
+    assert(isinstance(Settings.refineTol, (int, float))), 'Invalid refineTol'
     
     assert(isinstance(Settings.r_seed, int)), 'Invalid r_seed'
     assert(isinstance(Settings.NOISE, bool)), 'Invalid NOISE'
@@ -144,6 +145,8 @@ def exportSettings(Settings, path=None):
     outputtxt.writelines('optiMaxIter: {}'.format(Settings.optiMaxIter) + '\n')
     outputtxt.writelines('optiTol: {}'.format(Settings.optiTol) + '\n')
     outputtxt.writelines('optiPolish: {}'.format(Settings.optiPolish) + '\n')
+    outputtxt.writelines('refine: {}'.format(Settings.refine) + '\n')
+    outputtxt.writelines('refineTol: {}'.format(Settings.refineTol) + '\n')
     outputtxt.writelines('r_seed: {}'.format(Settings.r_seed) + '\n')
     outputtxt.writelines('NOISE: {}'.format(Settings.NOISE) + '\n')
     outputtxt.writelines('ABS_NOISE_STD: {}'.format(Settings.ABS_NOISE_STD) + '\n')
