@@ -787,19 +787,26 @@ if __name__ == '__main__':
         realRL = ng.generateReactionListFromAntimony(realModel)
     
     # Species
-    realNumBoundary = realRR.getNumBoundarySpecies()
     realNumFloating = realRR.getNumFloatingSpecies()
     realFloatingIds = realRR.getFloatingSpeciesIds()
     realFloatingIdsSort = np.sort(realFloatingIds)
     realFloatingIdsInd = np.fromiter(map(int, [s.strip('S') for s in realFloatingIds]), dtype=int)
     realFloatingIdsIndSort = np.sort(realFloatingIdsInd)
     realFloatingIdsIndSortList = list(realFloatingIdsIndSort)
-    realBoundaryIds = realRR.getBoundarySpeciesIds()
+    
+    realNumBoundary = realRR.getNumBoundarySpecies()
+    if realNumBoundary == 0:
+        realNumBoundary = 1
+        realBoundaryIds = ['S{}'.format(realNumFloating)]
+        realBoundaryVal = [1]
+    else:
+        realBoundaryIds = realRR.getBoundarySpeciesIds()
+        realBoundaryVal = realRR.getBoundarySpeciesConcentrations()
     realBoundaryIdsSort = np.sort(realBoundaryIds)
     realBoundaryIdsInd = np.fromiter(map(int, [s.strip('S') for s in realBoundaryIds]), dtype=int)
     realBoundaryIdsIndSort = np.sort(realBoundaryIdsInd)
     realBoundaryIdsIndSortList = list(realBoundaryIdsIndSort)
-    realBoundaryVal = realRR.getBoundarySpeciesConcentrations()
+    
     realReactionIds = realRR.getReactionIds()
     realGlobalParameterIds = realRR.getGlobalParameterIds()
     
@@ -1030,3 +1037,4 @@ if __name__ == '__main__':
     
     # Restore config
     roadrunner.Config.setValue(roadrunner.Config.PYTHON_ENABLE_NAMED_MATRIX, rr_nmval)
+
