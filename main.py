@@ -61,8 +61,6 @@ class SettingsClass:
         self.recomb = 0.3
         # Track stoichiometry instead of reaction lists (default: True)
         self.trackStoichiometry = True
-        # Treat all boundary species as the same (default: False)
-        self.collapseBoundary = False
         # Set conserved moiety (default: False)
         self.conservedMoiety = False
         
@@ -138,7 +136,7 @@ class SettingsClass:
         # Flag to save current settings
         self.EXPORT_SETTINGS = True
         # Path to save the output
-        self.EXPORT_PATH = './outputs/nosort_test'
+        self.EXPORT_PATH = './outputs/alias_test_human'
         # Overwrite the contents if the folder exists
         self.EXPORT_OVERWRITE = False
         # Create folders based on model names
@@ -460,8 +458,8 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
             eval_concCC[m] = mut_concCC[m]
         else:
             antStr = ng.generateAntimony(realFloatingIds, realBoundaryIds, 
-                                         fid, bid, reactionList, 
-                                         boundary_init=realBoundaryVal)
+                                         realFloatingIdsIndList, realBoundaryIdsIndList,
+                                         reactionList, boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
                 concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
@@ -562,7 +560,8 @@ def initialize(Settings):
                 st = ng.getFullStoichiometryMatrix(rl, ns)
                 stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
         antStr = ng.generateAntimony(realFloatingIds, realBoundaryIds, 
-                                     fid, bid, rl, boundary_init=realBoundaryVal)
+                                     realFloatingIdsIndList, realBoundaryIdsIndList, 
+                                     rl, boundary_init=realBoundaryVal)
 
         try:
             r = te.loada(antStr)
@@ -670,7 +669,8 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv, Settings):
             rnd_concCC[l] = listconcCC[l]
         else:
             antStr = ng.generateAntimony(realFloatingIds, realBoundaryIds, 
-                                         fid, bid, rl, boundary_init=realBoundaryVal)
+                                         realFloatingIdsIndList, realBoundaryIdsIndList,
+                                         rl, boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
                 concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
@@ -781,12 +781,12 @@ if __name__ == '__main__':
         try:
             realRR = te.loada(readModel)
             realModel = readModel
-            realRL = ng.generateReactionListFromAntimony(realModel)
+            # realRL = ng.generateReactionListFromAntimony(realModel)
         except:
             try:
                 realRR = te.loads(readModel)
                 realModel = realRR.getAntimony()
-                realRL = ng.generateReactionListFromAntimony(realModel)
+                # realRL = ng.generateReactionListFromAntimony(realModel)
             except:
                 raise Exception("Cannot read the given model")
         
@@ -794,25 +794,37 @@ if __name__ == '__main__':
         # Using one of the test models
         realModel = ioutils.testModels(Settings.modelType)
         realRR = te.loada(realModel)
-        realRL = ng.generateReactionListFromAntimony(realModel)
+        # realRL = ng.generateReactionListFromAntimony(realModel)
     
     # Species
     realNumFloating = realRR.getNumFloatingSpecies()
-    realFloatingIds = realRR.getFloatingSpeciesIds()
-    realFloatingIdsInd = np.fromiter(map(int, [s.strip('S') for s in realFloatingIds]), dtype=int)
-    realFloatingIdsIndList = list(realFloatingIdsInd)
+    
+    realFloatingIds = []
+    realFloatingIdsIndList = []
+    for i in range(realNumFloating):
+        realFloatingIds.append('S{}'.format(i))
+        realFloatingIdsIndList.append(i)
+    fid_dict = dict(zip(realFloatingIds, realRR.getFloatingSpeciesIds()))
+        
+    realFloatingIdsInd = np.array(realFloatingIdsIndList)
     
     realNumBoundary = realRR.getNumBoundarySpecies()
     if realNumBoundary == 0:
         realNumBoundary = 1
         realBoundaryIds = ['S{}'.format(realNumFloating)]
+        realBoundaryIdsIndList = [realNumFloating]
+        bid_dict = dict(zip(realBoundaryIds, ['sink']))
         realBoundaryVal = [1]
     else:
-        realBoundaryIds = realRR.getBoundarySpeciesIds()
+        realBoundaryIds = []
+        realBoundaryIdsIndList = []
+        for i in range(realNumBoundary):
+            realBoundaryIds.append('S{}'.format(i+realNumFloating))
+            realBoundaryIdsIndList.append(i+realNumFloating)
+        bid_dict = dict(zip(realBoundaryIds, realRR.getBoundarySpeciesIds()))
         realBoundaryVal = realRR.getBoundarySpeciesConcentrations()
         
-    realBoundaryIdsInd = np.fromiter(map(int, [s.strip('S') for s in realBoundaryIds]), dtype=int)
-    realBoundaryIdsIndList = list(realBoundaryIdsInd)
+    realBoundaryIdsInd = np.array(realBoundaryIdsIndList)
     
     realReactionIds = realRR.getReactionIds()
     realGlobalParameterIds = realRR.getGlobalParameterIds()
@@ -989,6 +1001,8 @@ if __name__ == '__main__':
         print("Run time: {}".format(t2-t1))
         
 #%%
+        # TODO: remove unnecessary boundary species
+
         if Settings.refine:
             print("Refining")
             for i,j in enumerate(ens_model):
@@ -1009,6 +1023,14 @@ if __name__ == '__main__':
                         ens_model[i] = r.getAntimony(current=True)
                 except:
                     pass
+                try:
+                    r.clearModel()
+                except:
+                    pass        
+                antimony.clearPreviousLoads()
+                antimony.freeAll()
+                
+            memory.append(process.memory_info().rss)
             dist_top_ind = np.argsort(ens_dist)
             dist_top = ens_dist[dist_top_ind]
             model_top = ens_model[dist_top_ind]
@@ -1017,9 +1039,36 @@ if __name__ == '__main__':
             avg_dist[-1] = np.average(dist_top)
             med_dist[-1] = np.median(dist_top)
             top_dist[-1] = np.average(np.unique(dist_top)[:top_ind])
-            
+        
+        
+        # Replace correct species names
+        for i,j in enumerate(ens_rl):
+            r = te.loada(ens_model[i])
+            param = r.getGlobalParameterValues()
+            newAnt = ng.generateAntimony(list(fid_dict.values()), 
+                                         list(bid_dict.values()), 
+                                         realFloatingIdsIndList, 
+                                         realBoundaryIdsIndList, 
+                                         j, boundary_init=realBoundaryVal)
+            # TODO: remove
+            r = te.loada(newAnt)
+            r.setValues(r.getGlobalParameterIds(), param)
+            ens_model[i] = r.getAntimony(current=True)
+            try:
+                r.clearModel()
+            except:
+                pass        
+            antimony.clearPreviousLoads()
+            antimony.freeAll()
+
+        model_top = ens_model[dist_top_ind]
+        memory.append(process.memory_info().rss)
+        
+        # TODO: check if original stoichiometry is recovered
+        
+        
         # Collect models
-        kdeOutput = analysis.selectWithKernalDensity(model_top, dist_top)
+        kdeOutput = analysis.selectWithKernalDensity(dist_top)
         
         if Settings.EXPORT_ALL_MODELS:
             model_col = model_top

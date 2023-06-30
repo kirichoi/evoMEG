@@ -388,7 +388,7 @@ def generateRateLaw(rl, floatingIds, boundaryIds, rlt, Jind):
     return rateLaw, Klist
 
 
-def generateSimpleRateLaw(rl, Jind):
+def generateSimpleRateLaw(rind, Jind, real, tar):
     
     Klist = []
     
@@ -401,18 +401,18 @@ def generateSimpleRateLaw(rl, Jind):
     T = T + '(Kf' + str(Jind) + '*'
     Klist.append('Kf' + str(Jind))
     
-    for i in range(len(rl[Jind][3])):
-        T = T + 'S' + str(rl[Jind][3][i])
-        if i < len(rl[Jind][3]) - 1:
+    for i in range(len(rind[3])):
+        T = T + real[tar.index(rind[3][i])]
+        if i < len(rind[3]) - 1:
             T = T + '*'
     
-    if rl[Jind][2] == Reversibility.REVERSIBLE:
+    if rind[2] == Reversibility.REVERSIBLE:
         T = T + ' - Kr' + str(Jind) + '*'
         Klist.append('Kr' + str(Jind))
         
-        for i in range(len(rl[Jind][4])):
-            T = T + 'S' + str(rl[Jind][4][i])
-            if i < len(rl[Jind][4]) - 1:
+        for i in range(len(rind[4])):
+            T = T + real[tar.index(rind[4][i])]
+            if i < len(rind[4]) - 1:
                 T = T + '*'
             
     T = T + ')'
@@ -420,45 +420,42 @@ def generateSimpleRateLaw(rl, Jind):
     # D
     D = D + '1 + '
     
-    for i in range(len(rl[Jind][3])):
-        D = D + 'S' + str(rl[Jind][3][i])
-        if i < len(rl[Jind][3]) - 1:
+    for i in range(len(rind[3])):
+        D = D + real[tar.index(rind[3][i])]
+        if i < len(rind[3]) - 1:
             D = D + '*'
     
-    if rl[Jind][2] == Reversibility.REVERSIBLE:
+    if rind[2] == Reversibility.REVERSIBLE:
         D = D + ' + '
-        for i in range(len(rl[Jind][4])):
-            D = D + 'S' + str(rl[Jind][4][i])
-            if i < len(rl[Jind][4]) - 1:
+        for i in range(len(rind[4])):
+            D = D + real[tar.index(rind[4][i])]
+            if i < len(rind[4]) - 1:
                 D = D + '*'
     
     # Activation
-    if (len(rl[Jind][5]) > 0):
-        for i in range(len(rl[Jind][5])):
+    if (len(rind[5]) > 0):
+        for i in range(len(rind[5])):
             ACT = ACT + '(1 + Ka' + str(Jind) + str(i) + '*'
             Klist.append('Ka' + str(Jind) + str(i))
-            ACT = ACT + 'S' + str(rl[Jind][5][i]) + ')*'
+            ACT = ACT + real[tar.index(rind[5][i])] + ')*'
             
     # Inhibition
-    if (len(rl[Jind][6]) > 0):
-        for i in range(len(rl[Jind][6])):
+    if (len(rind[6]) > 0):
+        for i in range(len(rind[6])):
             INH = INH + '(1/(1 + Ki' + str(Jind) + str(i) + '*'
             Klist.append('Ki' + str(Jind) + str(i))
-            INH = INH + 'S' + str(rl[Jind][6][i]) + '))*'
+            INH = INH + real[tar.index(rind[6][i])] + '))*'
     
     rateLaw = ACT + INH + T + '/(' + D + ')'
         
     return rateLaw, Klist
 
 
-def generateAntimony(floatingIds, boundaryIds, stt1, stt2, reactionList, boundary_init=None):
+def generateAntimony(floatingIds, boundaryIds, fid, bid, reactionList, boundary_init=None):
     Klist = []
     
-    real = np.append(floatingIds, boundaryIds)
-    if type(real[0]) == 'str' or type(real[0]) == np.str_:
-        real = [s.strip('S') for s in real]
-    real = list(map(int, real))
-    tar = stt1 + stt2
+    real = floatingIds + boundaryIds
+    tar = fid + bid
     tar = list(map(int, tar))
     
     # List species
@@ -479,46 +476,46 @@ def generateAntimony(floatingIds, boundaryIds, stt1, stt2, reactionList, boundar
     for index, rind in enumerate(reactionList):
         if rind[0] == ReactionType.UNIUNI:
             # UniUni
-            antStr = antStr + 'J' + str(index) + ': S' + str(real[tar.index(reactionList[index][3][0])])
+            antStr = antStr + 'J' + str(index) + ': ' + real[tar.index(rind[3][0])]
             antStr = antStr + ' -> '
-            antStr = antStr + 'S' + str(real[tar.index(reactionList[index][4][0])])
+            antStr = antStr + real[tar.index(rind[4][0])]
             antStr = antStr + '; '
-            RateLaw, klist_i = generateSimpleRateLaw(reactionList, index)
+            RateLaw, klist_i = generateSimpleRateLaw(rind, index, real, tar)
             antStr = antStr + RateLaw
             Klist.append(klist_i)
         elif rind[0] == ReactionType.BIUNI:
             # BiUni
-            antStr = antStr + 'J' + str(index) + ': S' + str(real[tar.index(reactionList[index][3][0])])
+            antStr = antStr + 'J' + str(index) + ': ' + real[tar.index(rind[3][0])]
             antStr = antStr + ' + '
-            antStr = antStr + 'S' + str(real[tar.index(reactionList[index][3][1])])
+            antStr = antStr + real[tar.index(rind[3][1])]
             antStr = antStr + ' -> '
-            antStr = antStr + 'S' + str(real[tar.index(reactionList[index][4][0])])
+            antStr = antStr + real[tar.index(rind[4][0])]
             antStr = antStr + '; '
-            RateLaw, klist_i = generateSimpleRateLaw(reactionList, index)
+            RateLaw, klist_i = generateSimpleRateLaw(rind, index, real, tar)
             antStr = antStr + RateLaw
             Klist.append(klist_i)
         elif rind[0] == ReactionType.UNIBI:
             # UniBi
-            antStr = antStr + 'J' + str(index) + ': S' + str(real[tar.index(reactionList[index][3][0])])
+            antStr = antStr + 'J' + str(index) + ': ' + real[tar.index(rind[3][0])]
             antStr = antStr + ' -> '
-            antStr = antStr + 'S' + str(real[tar.index(reactionList[index][4][0])])
+            antStr = antStr + real[tar.index(rind[4][0])]
             antStr = antStr + ' + '
-            antStr = antStr + 'S' + str(real[tar.index(reactionList[index][4][1])])
+            antStr = antStr + real[tar.index(rind[4][1])]
             antStr = antStr + '; '
-            RateLaw, klist_i = generateSimpleRateLaw(reactionList, index)
+            RateLaw, klist_i = generateSimpleRateLaw(rind, index, real, tar)
             antStr = antStr + RateLaw
             Klist.append(klist_i)
         else:
             # BiBi
-            antStr = antStr + 'J' + str(index) + ': S' + str(real[tar.index(reactionList[index][3][0])])
+            antStr = antStr + 'J' + str(index) + ': ' + real[tar.index(rind[3][0])]
             antStr = antStr + ' + '
-            antStr = antStr + 'S' + str(real[tar.index(reactionList[index][3][1])])
+            antStr = antStr + real[tar.index(rind[3][1])]
             antStr = antStr + ' -> '
-            antStr = antStr + 'S' + str(real[tar.index(reactionList[index][4][0])])
+            antStr = antStr + real[tar.index(rind[4][0])]
             antStr = antStr + ' + '
-            antStr = antStr + 'S' + str(real[tar.index(reactionList[index][4][1])])
+            antStr = antStr + real[tar.index(rind[4][1])]
             antStr = antStr + '; '
-            RateLaw, klist_i = generateSimpleRateLaw(reactionList, index)
+            RateLaw, klist_i = generateSimpleRateLaw(rind, index, real, tar)
             antStr = antStr + RateLaw
             Klist.append(klist_i)
         antStr = antStr + ';\n'
