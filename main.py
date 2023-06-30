@@ -33,6 +33,7 @@ class SettingsClass:
         # Path to preconfigured settings (default: None)
         self.READ_SETTINGS = None
         
+        
         # Test models =========================================================
         # A selection of test models including (reversible/irreverisble) 
         # feedforward loop, linear chain, nested cycles, feedback loop, and
@@ -48,7 +49,7 @@ class SettingsClass:
         
         # Size of output ensemble
         self.ens_size = 50
-        # Number of models used for recombination (default: int(ens_size/10))
+        # Number of models used for recombination (default: int(0.1*ens_size))
         self.pass_size = int(self.ens_size/10)
         # Top percentage of population to track (default: 0.05)
         self.top_p = 0.05
@@ -58,10 +59,14 @@ class SettingsClass:
         self.maxIter_mut = 200
         # Recombination probability (default: 0.3)
         self.recomb = 0.3
-        # Track stoichiometry instead of reaction lists
+        # Track stoichiometry instead of reaction lists (default: True)
         self.trackStoichiometry = True
+        # Treat all boundary species as the same (default: False)
+        self.collapseBoundary = False
         # Set conserved moiety (default: False)
         self.conservedMoiety = False
+        
+        # TODO: screen for the same stoichiometry at the end
         
         
         # Termination criterion settings ======================================
@@ -79,6 +84,7 @@ class SettingsClass:
         self.thres_shortest = None
         # Threshold top p-percent smallest distance
         self.thres_top = None
+        
         
         # Optimizer settings ==================================================
         # Settings specific to differential evolution
@@ -99,9 +105,13 @@ class SettingsClass:
         self.w2 = 1.0
         
         
-        # Randomization settings ==============================================
+        # Reaction settings ===================================================
+        # TODO: allow modification of probability
         
-        # Random seed
+        
+        # RNG and noise settings ==============================================
+        
+        # Seed
         self.r_seed = 123123
         # Flag to add Gaussian noise to the input
         self.NOISE = False
@@ -113,22 +123,22 @@ class SettingsClass:
         
         # Plotting settings ===================================================
         
-        # Flag to plot
-        self.SHOW_PLOT = False
-        # Flag to save plot
-        self.SAVE_PLOT = False
+        # Flag to visualize plot
+        self.SHOW_PLOT = True
+        # Flag to save figures
+        self.SAVE_PLOT = True
         
         
-        # Data settings =======================================================
+        # Export settings =====================================================
             
         # Flag to collect all models in the ensemble
-        self.EXPORT_ALL_MODELS = False
+        self.EXPORT_ALL_MODELS = True
         # Flag to save collected models
-        self.EXPORT_OUTPUT = False
+        self.EXPORT_OUTPUT = True
         # Flag to save current settings
-        self.EXPORT_SETTINGS = False
+        self.EXPORT_SETTINGS = True
         # Path to save the output
-        self.EXPORT_PATH = './outputs/stoi'
+        self.EXPORT_PATH = './outputs/collapseBoundary'
         # Overwrite the contents if the folder exists
         self.EXPORT_OVERWRITE = False
         # Create folders based on model names
@@ -749,7 +759,8 @@ if __name__ == '__main__':
     
     ioutils.validateSettings(Settings)
     
-    Settings.EXPORT_PATH = ioutils.exportPathHandler(Settings)
+    if Settings.RUN:
+        Settings.EXPORT_PATH = ioutils.exportPathHandler(Settings)
     
 #%% Analyze True Model
     roadrunner.Logger.disableLogging()
@@ -806,6 +817,7 @@ if __name__ == '__main__':
     else:
         realBoundaryIds = realRR.getBoundarySpeciesIds()
         realBoundaryVal = realRR.getBoundarySpeciesConcentrations()
+        
     realBoundaryIdsSort = np.sort(realBoundaryIds)
     realBoundaryIdsInd = np.fromiter(map(int, [s.strip('S') for s in realBoundaryIds]), dtype=int)
     realBoundaryIdsIndSort = np.sort(realBoundaryIdsInd)
