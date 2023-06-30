@@ -138,7 +138,7 @@ class SettingsClass:
         # Flag to save current settings
         self.EXPORT_SETTINGS = True
         # Path to save the output
-        self.EXPORT_PATH = './outputs/collapseBoundary'
+        self.EXPORT_PATH = './outputs/nosort_test'
         # Overwrite the contents if the folder exists
         self.EXPORT_OVERWRITE = False
         # Create folders based on model names
@@ -223,11 +223,6 @@ def f1(k_list, *args):
         else:
             objCCC[np.abs(objCCC) < 1e-8] = 0 # Set small values to zero
             
-            objCCC_row = args[0].getFloatingSpeciesIds()
-            objCCC_col = args[0].getReactionIds()
-            objCCC = objCCC[np.argsort(objCCC_row)]
-            objCCC = objCCC[:,np.argsort(objCCC_col)]
-            
             dist_obj = ((np.linalg.norm(realConcCC - objCCC))*(1 + np.sum(np.not_equal(np.sign(realConcCC), np.sign(objCCC)))))
     except:
         countf += 1
@@ -307,20 +302,20 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
             else:
                 ssum = np.sum(np.sign(realConcCC[:,r_idx]))
                 if ssum > 0:
-                    posRctInd = np.append(realFloatingIdsIndSort[realConcCC[:,r_idx] <= 0], 
-                                          realBoundaryIdsIndSort)
-                    posPrdInd = np.append(realFloatingIdsIndSort[realConcCC[:,r_idx] > 0], 
-                                          realBoundaryIdsIndSort)
+                    posRctInd = np.append(realFloatingIdsInd[realConcCC[:,r_idx] <= 0], 
+                                          realBoundaryIdsInd)
+                    posPrdInd = np.append(realFloatingIdsInd[realConcCC[:,r_idx] > 0], 
+                                          realBoundaryIdsInd)
                 elif ssum < 0:
-                    posRctInd = np.append(realFloatingIdsIndSort[realConcCC[:,r_idx] < 0], 
-                                          realBoundaryIdsIndSort)
-                    posPrdInd = np.append(realFloatingIdsIndSort[realConcCC[:,r_idx] >= 0], 
-                                          realBoundaryIdsIndSort)
+                    posRctInd = np.append(realFloatingIdsInd[realConcCC[:,r_idx] < 0], 
+                                          realBoundaryIdsInd)
+                    posPrdInd = np.append(realFloatingIdsInd[realConcCC[:,r_idx] >= 0], 
+                                          realBoundaryIdsInd)
                 else:
-                    posRctInd = np.append(realFloatingIdsIndSort[realConcCC[:,r_idx] <= 0], 
-                                          realBoundaryIdsIndSort)
-                    posPrdInd = np.append(realFloatingIdsIndSort[realConcCC[:,r_idx] >= 0], 
-                                          realBoundaryIdsIndSort)
+                    posRctInd = np.append(realFloatingIdsInd[realConcCC[:,r_idx] <= 0], 
+                                          realBoundaryIdsInd)
+                    posPrdInd = np.append(realFloatingIdsInd[realConcCC[:,r_idx] >= 0], 
+                                          realBoundaryIdsInd)
                     
                 rct = [col[3] for col in reactionList]
                 prd = [col[4] for col in reactionList]
@@ -441,7 +436,7 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
             o += 1
             
             if Settings.trackStoichiometry:
-                if ((fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList 
+                if ((fid != realFloatingIdsIndList or bid != realBoundaryIdsIndList 
                      or stt.tolist() in tracking or np.sum(stt) != 0 
                      or len(check_duplicate_reaction(stt)) > 0 or np.linalg.matrix_rank(stt) != realNumFloating) 
                     and (o < Settings.maxIter_mut)):
@@ -449,7 +444,7 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
                 else:
                     mutate_condition = False
             else:
-                if ((fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList 
+                if ((fid != realFloatingIdsIndList or bid != realBoundaryIdsIndList 
                      or reactionList in tracking or np.sum(stt) != 0 
                      or len(check_duplicate_reaction(stt)) > 0 or np.linalg.matrix_rank(stt) != realNumFloating) 
                     and (o < Settings.maxIter_mut)):
@@ -464,7 +459,7 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
             eval_rl[m] = mut_rl[m]
             eval_concCC[m] = mut_concCC[m]
         else:
-            antStr = ng.generateAntimony(realFloatingIdsSort, realBoundaryIdsSort, 
+            antStr = ng.generateAntimony(realFloatingIds, realBoundaryIds, 
                                          fid, bid, reactionList, 
                                          boundary_init=realBoundaryVal)
             try:
@@ -545,28 +540,28 @@ def initialize(Settings):
     
     # Initial Random generation
     while (numGoodModels < Settings.ens_size):
-        rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
-                                     realBoundaryIdsIndSort, realConcCC)
+        rl = ng.generateReactionList(nsList, nrList, realFloatingIdsInd, 
+                                     realBoundaryIdsInd, realConcCC)
         st = ng.getFullStoichiometryMatrix(rl, ns)
         stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
         # Ensure no redundant model
         if Settings.trackStoichiometry:
-            while (fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList
+            while (fid != realFloatingIdsIndList or bid != realBoundaryIdsIndList
                    or stt.tolist() in tracking or np.sum(stt) != 0 
                    or np.linalg.matrix_rank(stt) != realNumFloating):
-                rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
-                                             realBoundaryIdsIndSort, realConcCC)
+                rl = ng.generateReactionList(nsList, nrList, realFloatingIdsInd, 
+                                             realBoundaryIdsInd, realConcCC)
                 st = ng.getFullStoichiometryMatrix(rl, ns)
                 stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
         else:
-            while (fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList
+            while (fid != realFloatingIdsIndList or bid != realBoundaryIdsIndList
                    or rl in tracking or np.sum(stt) != 0 
                    or np.linalg.matrix_rank(stt) != realNumFloating):
-                rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
-                                             realBoundaryIdsIndSort, realConcCC)
+                rl = ng.generateReactionList(nsList, nrList, realFloatingIdsInd, 
+                                             realBoundaryIdsInd, realConcCC)
                 st = ng.getFullStoichiometryMatrix(rl, ns)
                 stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
-        antStr = ng.generateAntimony(realFloatingIdsSort, realBoundaryIdsSort, 
+        antStr = ng.generateAntimony(realFloatingIds, realBoundaryIds, 
                                      fid, bid, rl, boundary_init=realBoundaryVal)
 
         try:
@@ -642,27 +637,27 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv, Settings):
     
     for l in range(rndSize):
         d = 0
-        rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
-                                     realBoundaryIdsIndSort, realConcCC)
+        rl = ng.generateReactionList(nsList, nrList, realFloatingIdsInd, 
+                                     realBoundaryIdsInd, realConcCC)
         st = ng.getFullStoichiometryMatrix(rl, ns)
         stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
         # Ensure no redundant models
         if Settings.trackStoichiometry:
-            while ((fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList or 
+            while ((fid != realFloatingIdsIndList or bid != realBoundaryIdsIndList or 
                     stt.tolist() in tracking or np.sum(stt) != 0 or 
                     np.linalg.matrix_rank(stt) != realNumFloating) and (d < Settings.maxIter_gen)):
-                rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
-                                             realBoundaryIdsIndSort, realConcCC)
+                rl = ng.generateReactionList(nsList, nrList, realFloatingIdsInd, 
+                                             realBoundaryIdsInd, realConcCC)
                 st = ng.getFullStoichiometryMatrix(rl, ns)
                 stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
                 
                 d += 1
         else:
-            while ((fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList or 
+            while ((fid != realFloatingIdsIndList or bid != realBoundaryIdsIndList or 
                     rl in tracking or np.sum(stt) != 0 or 
                     np.linalg.matrix_rank(stt) != realNumFloating) and (d < Settings.maxIter_gen)):
-                rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
-                                             realBoundaryIdsIndSort, realConcCC)
+                rl = ng.generateReactionList(nsList, nrList, realFloatingIdsInd, 
+                                             realBoundaryIdsInd, realConcCC)
                 st = ng.getFullStoichiometryMatrix(rl, ns)
                 stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
                 
@@ -674,7 +669,7 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv, Settings):
             rnd_rl[l] = listrl[l]
             rnd_concCC[l] = listconcCC[l]
         else:
-            antStr = ng.generateAntimony(realFloatingIdsSort, realBoundaryIdsSort, 
+            antStr = ng.generateAntimony(realFloatingIds, realBoundaryIds, 
                                          fid, bid, rl, boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
@@ -804,10 +799,8 @@ if __name__ == '__main__':
     # Species
     realNumFloating = realRR.getNumFloatingSpecies()
     realFloatingIds = realRR.getFloatingSpeciesIds()
-    realFloatingIdsSort = np.sort(realFloatingIds)
     realFloatingIdsInd = np.fromiter(map(int, [s.strip('S') for s in realFloatingIds]), dtype=int)
-    realFloatingIdsIndSort = np.sort(realFloatingIdsInd)
-    realFloatingIdsIndSortList = list(realFloatingIdsIndSort)
+    realFloatingIdsIndList = list(realFloatingIdsInd)
     
     realNumBoundary = realRR.getNumBoundarySpecies()
     if realNumBoundary == 0:
@@ -818,10 +811,8 @@ if __name__ == '__main__':
         realBoundaryIds = realRR.getBoundarySpeciesIds()
         realBoundaryVal = realRR.getBoundarySpeciesConcentrations()
         
-    realBoundaryIdsSort = np.sort(realBoundaryIds)
     realBoundaryIdsInd = np.fromiter(map(int, [s.strip('S') for s in realBoundaryIds]), dtype=int)
-    realBoundaryIdsIndSort = np.sort(realBoundaryIdsInd)
-    realBoundaryIdsIndSortList = list(realBoundaryIdsIndSort)
+    realBoundaryIdsIndList = list(realBoundaryIdsInd)
     
     realReactionIds = realRR.getReactionIds()
     realGlobalParameterIds = realRR.getGlobalParameterIds()
@@ -839,15 +830,6 @@ if __name__ == '__main__':
     realFluxCC[np.abs(realFluxCC) < 1e-8] = 0
     realConcCC[np.abs(realConcCC) < 1e-8] = 0
     
-    # Ordering
-    realFluxCC = realFluxCC[np.argsort(realFloatingIds)]
-    realFluxCC = realFluxCC[:,np.argsort(realReactionIds)]
-    
-    realConcCC = realConcCC[np.argsort(realFloatingIds)]
-    realConcCC = realConcCC[:,np.argsort(realReactionIds)]
-    
-    realFlux = realFlux[np.argsort(realReactionIds)]
-    
     # Number of Species and Ranges
     ns = realNumBoundary + realNumFloating # Number of species
     nsList = np.arange(ns)
@@ -858,7 +840,6 @@ if __name__ == '__main__':
     Settings.mut_size = int(Settings.ens_size/2)
     mut_range = range(Settings.mut_size)
     
-    realCount = np.array(np.unravel_index(np.argsort(realFluxCC, axis=None), realFluxCC.shape)).T
         
     #%%
     print("Original Control Coefficients")
