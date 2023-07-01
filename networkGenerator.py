@@ -93,6 +93,9 @@ def generateReactionList(nsList, nrList, realFloatingIdsInd, realBoundaryIdsInd,
             if np.sum(tarval > 0) == len(realFloatingIdsInd):
                 posPrdInd = realFloatingIdsInd[tarval > 0]
                 posPrdProb = tarval/np.sum(tarval)
+            elif np.sum(tarval > 0) == 1 and all(tarval[tarval < 0] == 0):
+                posPrdInd = realFloatingIdsInd[tarval > 0]
+                posPrdProb = [1]
             else:
                 posPrdInd = np.append(realFloatingIdsInd[tarval > 0], realBoundaryIdsInd)
                 a = np.sum(tarval[tarval > 0])*((len(tarval[tarval > 0]))
@@ -104,6 +107,9 @@ def generateReactionList(nsList, nrList, realFloatingIdsInd, realBoundaryIdsInd,
             if np.sum(tarval < 0) == len(realFloatingIdsInd):
                 posRctInd = realFloatingIdsInd[tarval < 0]
                 posRctProb = tarval/np.sum(tarval)
+            elif np.sum(tarval < 0) == 1 and all(tarval[tarval >= 0] == 0):
+                posRctInd = realFloatingIdsInd[tarval < 0]
+                posRctProb = [1]
             else:
                 posRctInd = np.append(realFloatingIdsInd[tarval < 0], realBoundaryIdsInd)
                 a = np.sum(tarval[tarval < 0])*((len(tarval[tarval < 0]))
