@@ -80,7 +80,7 @@ def pickReactionType():
 # Generates a reaction network in the form of a reaction list
 # reactionList = [nSpecies, reaction, ....]
 # reaction = [reactionType, [list of reactants], [list of product], rateConstant]
-def generateReactionList(nsList, nrList, realFloatingIdsIndSort, realBoundaryIdsIndSort, realConcCC):
+def generateReactionList(nsList, nrList, realFloatingIdsInd, realBoundaryIdsInd, realConcCC):
 
     reactionList = []
     
@@ -88,41 +88,34 @@ def generateReactionList(nsList, nrList, realFloatingIdsIndSort, realBoundaryIds
         tarval = realConcCC[:,r_idx]
         ssum = np.sum(np.sign(tarval))
         if ssum > 0:
-            posRctInd = np.append(realFloatingIdsIndSort[tarval <= 0], 
-                                  realBoundaryIdsIndSort)
-            
+            posRctInd = np.append(realFloatingIdsInd[tarval <= 0], realBoundaryIdsInd)
             posRctProb = np.ones(len(posRctInd))/len(posRctInd)
-            if np.sum(tarval > 0) == len(realFloatingIdsIndSort):
-                posPrdInd = realFloatingIdsIndSort[tarval > 0]
+            if np.sum(tarval > 0) == len(realFloatingIdsInd):
+                posPrdInd = realFloatingIdsInd[tarval > 0]
                 posPrdProb = tarval/np.sum(tarval)
             else:
-                posPrdInd = np.append(realFloatingIdsIndSort[tarval > 0], 
-                                      realBoundaryIdsIndSort)
+                posPrdInd = np.append(realFloatingIdsInd[tarval > 0], realBoundaryIdsInd)
                 a = np.sum(tarval[tarval > 0])*((len(tarval[tarval > 0]))
-                                                +len(realBoundaryIdsIndSort))/len(tarval[tarval > 0])
+                                                +len(realBoundaryIdsInd))/len(tarval[tarval > 0])
                 posPrdProb = np.append(tarval[tarval > 0]/a, 
-                                       np.repeat(1/(len(realBoundaryIdsIndSort)+len(tarval[tarval > 0])), 
-                                                 len(realBoundaryIdsIndSort)))
+                                       np.repeat(1/(len(realBoundaryIdsInd)+len(tarval[tarval > 0])), 
+                                                 len(realBoundaryIdsInd)))
         elif ssum < 0:
-            if np.sum(tarval < 0) == len(realFloatingIdsIndSort):
-                posRctInd = realFloatingIdsIndSort[tarval < 0]
+            if np.sum(tarval < 0) == len(realFloatingIdsInd):
+                posRctInd = realFloatingIdsInd[tarval < 0]
                 posRctProb = tarval/np.sum(tarval)
             else:
-                posRctInd = np.append(realFloatingIdsIndSort[tarval < 0], 
-                                      realBoundaryIdsIndSort)
+                posRctInd = np.append(realFloatingIdsInd[tarval < 0], realBoundaryIdsInd)
                 a = np.sum(tarval[tarval < 0])*((len(tarval[tarval < 0]))
-                                                +len(realBoundaryIdsIndSort))/len(tarval[tarval < 0])
+                                                +len(realBoundaryIdsInd))/len(tarval[tarval < 0])
                 posRctProb = np.append(tarval[tarval < 0]/a, 
-                                       np.repeat(1/(len(realBoundaryIdsIndSort)+len(tarval[tarval < 0])), 
-                                                 len(realBoundaryIdsIndSort)))
-            posPrdInd = np.append(realFloatingIdsIndSort[tarval >= 0], 
-                                  realBoundaryIdsIndSort)
+                                       np.repeat(1/(len(realBoundaryIdsInd)+len(tarval[tarval < 0])), 
+                                                 len(realBoundaryIdsInd)))
+            posPrdInd = np.append(realFloatingIdsInd[tarval >= 0], realBoundaryIdsInd)
             posPrdProb = np.ones(len(posPrdInd))/len(posPrdInd)
         else:
-            posRctInd = np.append(realFloatingIdsIndSort[tarval <= 0], 
-                                  realBoundaryIdsIndSort)
-            posPrdInd = np.append(realFloatingIdsIndSort[tarval >= 0], 
-                                  realBoundaryIdsIndSort)
+            posRctInd = np.append(realFloatingIdsInd[tarval <= 0], realBoundaryIdsInd)
+            posPrdInd = np.append(realFloatingIdsInd[tarval >= 0], realBoundaryIdsInd)
             posRctProb = np.ones(len(posRctInd))/len(posRctInd)
             posPrdProb = np.ones(len(posPrdInd))/len(posPrdInd)
         
@@ -138,8 +131,8 @@ def generateReactionList(nsList, nrList, realFloatingIdsIndSort, realBoundaryIds
             all_rct = [i for i,x in enumerate(rct) if x==rct_id]
             all_prd = [i for i,x in enumerate(prd) if x==prd_id]
             
-            while (((np.any(np.isin(rct_id, realBoundaryIdsIndSort))) and 
-                   (np.any(np.isin(prd_id, realBoundaryIdsIndSort)))) or 
+            while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
+                   (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or 
                    (len(set(all_rct) & set(all_prd)) > 0)):
                 rct_id = np.random.choice(posRctInd, size=1, p=posRctProb).tolist()
                 prd_id = np.random.choice(posPrdInd, size=1, p=posPrdProb).tolist()
@@ -153,8 +146,8 @@ def generateReactionList(nsList, nrList, realFloatingIdsIndSort, realBoundaryIds
             all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
             all_prd = [i for i,x in enumerate(prd) if x==prd_id]
             
-            while (((np.any(np.isin(rct_id, realBoundaryIdsIndSort))) and 
-                   (np.any(np.isin(prd_id, realBoundaryIdsIndSort)))) or 
+            while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
+                   (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or 
                    (len(set(all_rct) & set(all_prd)) > 0)):
                 rct_id = np.random.choice(posRctInd, size=2, replace=True, p=posRctProb).tolist()
                 prd_id = np.random.choice(posPrdInd, size=1, p=posPrdProb).tolist()
@@ -168,8 +161,8 @@ def generateReactionList(nsList, nrList, realFloatingIdsIndSort, realBoundaryIds
             all_rct = [i for i,x in enumerate(rct) if x==rct_id]
             all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
             
-            while (((np.any(np.isin(rct_id, realBoundaryIdsIndSort))) and 
-                   (np.any(np.isin(prd_id, realBoundaryIdsIndSort)))) or 
+            while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
+                   (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or 
                    (len(set(all_rct) & set(all_prd)) > 0)):
                 rct_id = np.random.choice(posRctInd, size=1, p=posRctProb).tolist()
                 prd_id = np.random.choice(posPrdInd, size=2, replace=True, p=posPrdProb).tolist()
@@ -183,8 +176,8 @@ def generateReactionList(nsList, nrList, realFloatingIdsIndSort, realBoundaryIds
             all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
             all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
             
-            while (((np.any(np.isin(rct_id, realBoundaryIdsIndSort))) and 
-                   (np.any(np.isin(prd_id, realBoundaryIdsIndSort)))) or
+            while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
+                   (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or
                    (len(set(all_rct) & set(all_prd)) > 0)):
                 rct_id = np.random.choice(posRctInd, size=2, replace=True, p=posRctProb).tolist()
                 prd_id = np.random.choice(posPrdInd, size=2, replace=True, p=posPrdProb).tolist()
@@ -198,8 +191,8 @@ def generateReactionList(nsList, nrList, realFloatingIdsIndSort, realBoundaryIds
         elif regType == RegulationType.INHIBITION:
             act_id = []
             delList = np.concatenate([rct_id, prd_id])
-            if len(realBoundaryIdsIndSort) > 0:
-                delList = np.unique(np.append(delList, realBoundaryIdsIndSort))
+            if len(realBoundaryIdsInd) > 0:
+                delList = np.unique(np.append(delList, realBoundaryIdsInd))
             cList = np.delete(nsList, delList)
             if len(cList) == 0:
                 inhib_id = []
@@ -209,8 +202,8 @@ def generateReactionList(nsList, nrList, realFloatingIdsIndSort, realBoundaryIds
         elif regType == RegulationType.ACTIVATION:
             inhib_id = []
             delList = np.concatenate([rct_id, prd_id])
-            if len(realBoundaryIdsIndSort) > 0:
-                delList = np.unique(np.append(delList, realBoundaryIdsIndSort))
+            if len(realBoundaryIdsInd) > 0:
+                delList = np.unique(np.append(delList, realBoundaryIdsInd))
             cList = np.delete(nsList, delList)
             if len(cList) == 0:
                 act_id = []
@@ -219,8 +212,8 @@ def generateReactionList(nsList, nrList, realFloatingIdsIndSort, realBoundaryIds
                 act_id = np.random.choice(cList, size=1).tolist()
         else:
             delList = np.concatenate([rct_id, prd_id])
-            if len(realBoundaryIdsIndSort) > 0:
-                delList = np.unique(np.append(delList, realBoundaryIdsIndSort))
+            if len(realBoundaryIdsInd) > 0:
+                delList = np.unique(np.append(delList, realBoundaryIdsInd))
             cList = np.delete(nsList, delList)
             if len(cList) < 2:
                 act_id = []
@@ -231,8 +224,7 @@ def generateReactionList(nsList, nrList, realFloatingIdsIndSort, realBoundaryIds
                 act_id = [reg_id[0]]
                 inhib_id = [reg_id[1]]
                 
-        reactionList.append([rType, regType, revType, rct_id, prd_id, act_id, 
-                             inhib_id])
+        reactionList.append([rType, regType, revType, rct_id, prd_id, act_id, inhib_id])
         
     return reactionList
     

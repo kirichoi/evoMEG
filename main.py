@@ -280,12 +280,6 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
         tempdiff = cFalse*np.linalg.norm(realConcCC - mut_concCC[m], axis=0)
         
         minrndidx = np.random.choice(minind)
-        
-        # stt = np.zeros((2,2))
-        fid = []
-        bid = []
-        # stt = tracking[0]
-        
         o = 0
         
         mutate_condition = True
