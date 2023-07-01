@@ -239,6 +239,7 @@ def generateReactionList(nsList, nrList, realFloatingIdsInd, realBoundaryIdsInd,
 # Returns a list:
 # [New Stoichiometry matrix, list of floatingIds, list of boundaryIds]
 def getFullStoichiometryMatrix(reactionList, ns):
+    
     st = np.zeros((ns, len(reactionList)), dtype=int)
     
     for index, rind in enumerate(reactionList):
@@ -589,6 +590,7 @@ def generateLinearChainAnt(ns):
     return antStr
 
 
+# TODO: generate reaction list from aliases
 def generateReactionListFromAntimony(antStr):
     """
     Generate reaction list from a model encoded in Antimony

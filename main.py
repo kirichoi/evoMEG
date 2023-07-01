@@ -41,7 +41,7 @@ class SettingsClass:
             
         # 'FFL_m', 'Linear_m', 'Nested_m', 'Branched_m', 'Feedback_m', 'sigPath'
         # 'FFL_r', 'Linear_r', 'Nested_r', 'Branched_r', 'Feedback_r'
-        self.modelType = 'FFL_m'
+        self.modelType = 'Linear_m'
         
         
         # General settings ====================================================
@@ -136,9 +136,9 @@ class SettingsClass:
         # Flag to save current settings
         self.EXPORT_SETTINGS = True
         # Path to save the output
-        self.EXPORT_PATH = './outputs/alias_test_human'
+        self.EXPORT_PATH = './outputs/hanging'
         # Overwrite the contents if the folder exists
-        self.EXPORT_OVERWRITE = False
+        self.EXPORT_OVERWRITE = True
         # Create folders based on model names
         self.EXPORT_FORCE_MODELNAMES = False
         
@@ -415,13 +415,8 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
                         act_id = [reg_id[0]]
                         inhib_id = [reg_id[1]]
                     
-                reactionList[r_idx] = [rType, 
-                                       regType, 
-                                       revType, 
-                                       rct_id, 
-                                       prd_id, 
-                                       act_id, 
-                                       inhib_id]
+                reactionList[r_idx] = [rType, regType, revType, rct_id, prd_id, 
+                                       act_id, inhib_id]
             
             st = ng.getFullStoichiometryMatrix(reactionList, ns)
             stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
@@ -520,6 +515,8 @@ def initialize(Settings):
     global counts
     global tracking
     
+    print("Starting initialization...")
+    
     numBadModels = 0
     numGoodModels = 0
     numIter = 0
@@ -532,6 +529,7 @@ def initialize(Settings):
     
     # Initial Random generation
     while (numGoodModels < Settings.ens_size):
+        numGen = 0
         rl = ng.generateReactionList(nsList, nrList, realFloatingIdsInd, 
                                      realBoundaryIdsInd, realConcCC)
         st = ng.getFullStoichiometryMatrix(rl, ns)
@@ -545,6 +543,9 @@ def initialize(Settings):
                                              realBoundaryIdsInd, realConcCC)
                 st = ng.getFullStoichiometryMatrix(rl, ns)
                 stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
+                numGen += 1
+                if int(numGen/10000) == (numGen/10000):
+                    print("Number of RL iterations = {}".format(numGen))
         else:
             while (fid != realFloatingIdsIndList or bid != realBoundaryIdsIndList
                    or rl in tracking or np.sum(stt) != 0 
@@ -553,6 +554,10 @@ def initialize(Settings):
                                              realBoundaryIdsInd, realConcCC)
                 st = ng.getFullStoichiometryMatrix(rl, ns)
                 stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
+                numGen += 1
+                if int(numGen/10000) == (numGen/10000):
+                    print("Number of RL iterations = {}".format(numGen))
+                    
         antStr = ng.generateAntimony(realFloatingIds, realBoundaryIds, 
                                      realFloatingIdsIndList, realBoundaryIdsIndList, 
                                      rl, boundary_init=realBoundaryVal)
@@ -591,9 +596,9 @@ def initialize(Settings):
             numBadModels = numBadModels + 1
         
         numIter = numIter + 1
-        if int(numIter/1000) == (numIter/1000):
+        if int(numIter/100) == (numIter/100):
             print("Number of iterations = {}".format(numIter))
-        if int(numIter/10000) == (numIter/10000):
+        if int(numIter/100) == (numIter/100):
             print("Number of good models = {}".format(numGoodModels))
     
         try:
@@ -761,12 +766,13 @@ if __name__ == '__main__':
     # if conservedMoiety:
     #     roadrunner.Config.setValue(roadrunner.Config.LOADSBMLOPTIONS_CONSERVED_MOIETIES, True)
     
+    roadrunner.Config.setValue(roadrunner.Config.PYTHON_ENABLE_NAMED_MATRIX, 0)
+    
     # roadrunner.Config.setValue(roadrunner.Config.STEADYSTATE_APPROX, True)
     # roadrunner.Config.setValue(roadrunner.Config.STEADYSTATE_APPROX_MAX_STEPS, 5)
     # roadrunner.Config.setValue(roadrunner.Config.STEADYSTATE_APPROX_TIME, 10000)
     # roadrunner.Config.setValue(roadrunner.Config.STEADYSTATE_APPROX_TOL, 1e-3)
     # roadrunner.Config.setValue(roadrunner.Config.ROADRUNNER_DISABLE_PYTHON_DYNAMIC_PROPERTIES, 1)
-    roadrunner.Config.setValue(roadrunner.Config.PYTHON_ENABLE_NAMED_MATRIX, 0)
     # roadrunner.Config.setValue(roadrunner.Config.MAX_OUTPUT_ROWS, 5)
 
     if Settings.MODEL_INPUT != None:
