@@ -448,7 +448,6 @@ def generateAntimony(floatingIds, boundaryIds, fid, bid, reactionList, boundary_
     
     real = floatingIds + boundaryIds
     tar = fid + bid
-    tar = list(map(int, tar))
     
     # List species
     antStr = ''
