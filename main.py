@@ -916,8 +916,6 @@ if __name__ == '__main__':
         
         # breakFlag = False
         
-        # TODO: Remove for loop
-        # TODO: Add polishing with fast optimizer 
         while not terminate:
             minind = np.argsort(ens_dist)[:Settings.pass_size]
             

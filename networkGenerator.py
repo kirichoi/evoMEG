@@ -84,6 +84,8 @@ def generateReactionList(nsList, nrList, realFloatingIdsInd, realBoundaryIdsInd,
 
     reactionList = []
     
+    # TODO: better heuristics (esp. probability)
+    
     for r_idx in nrList:
         tarval = realConcCC[:,r_idx]
         ssum = np.sum(np.sign(tarval))
@@ -93,7 +95,7 @@ def generateReactionList(nsList, nrList, realFloatingIdsInd, realBoundaryIdsInd,
             if np.sum(tarval > 0) == len(realFloatingIdsInd):
                 posPrdInd = realFloatingIdsInd[tarval > 0]
                 posPrdProb = tarval/np.sum(tarval)
-            elif np.sum(tarval > 0) == 1 and all(tarval[tarval < 0] == 0):
+            elif np.sum(tarval > 0) == 1 and all(tarval[tarval <= 0] == 0):
                 posPrdInd = realFloatingIdsInd[tarval > 0]
                 posPrdProb = [1]
             else:
