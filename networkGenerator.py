@@ -90,42 +90,70 @@ def generateReactionList(nsList, nrList, realFloatingIdsInd, realBoundaryIdsInd,
         tarval = realConcCC[:,r_idx]
         ssum = np.sum(np.sign(tarval))
         if ssum > 0:
-            posRctInd = np.append(realFloatingIdsInd[tarval <= 0], realBoundaryIdsInd)
-            posRctProb = np.ones(len(posRctInd))/len(posRctInd)
-            if np.sum(tarval > 0) == len(realFloatingIdsInd):
+            tarsum = np.sum(tarval > 0)
+            c = len(realFloatingIdsInd)-tarsum
+            posRctInd = np.empty(c+len(realBoundaryIdsInd), dtype=int)
+            posRctInd[:c] = realFloatingIdsInd[tarval <= 0]
+            posRctInd[c:] = realBoundaryIdsInd
+            posRctProb = np.empty(len(posRctInd))
+            posRctProb[:c] = 1/((1+c))
+            posRctProb[c:] = 1/(len(realBoundaryIdsInd)*(1+c))
+            if tarsum == len(realFloatingIdsInd):
                 posPrdInd = realFloatingIdsInd[tarval > 0]
                 posPrdProb = tarval/np.sum(tarval)
-            elif np.sum(tarval > 0) == 1 and all(tarval[tarval <= 0] == 0):
+            elif tarsum == 1 and all(tarval[tarval <= 0] == 0):
                 posPrdInd = realFloatingIdsInd[tarval > 0]
                 posPrdProb = [1]
             else:
-                posPrdInd = np.append(realFloatingIdsInd[tarval > 0], realBoundaryIdsInd)
-                a = np.sum(tarval[tarval > 0])*((len(tarval[tarval > 0]))
-                                                +len(realBoundaryIdsInd))/len(tarval[tarval > 0])
-                posPrdProb = np.append(tarval[tarval > 0]/a, 
-                                       np.repeat(1/(len(realBoundaryIdsInd)+len(tarval[tarval > 0])), 
-                                                 len(realBoundaryIdsInd)))
+                b = tarval[tarval > 0]
+                a = np.sum(b)*(len(b)+1)/len(b)
+                posPrdInd = np.empty(len(b)+len(realBoundaryIdsInd), dtype=int)
+                posPrdInd[:len(b)] = realFloatingIdsInd[tarval > 0]
+                posPrdInd[len(b):] = realBoundaryIdsInd
+                posPrdProb = np.empty(len(posPrdInd))
+                posPrdProb[:len(b)] = b/a
+                posPrdProb[len(b):] = 1/(len(realBoundaryIdsInd)*(1+len(b)))
         elif ssum < 0:
-            if np.sum(tarval < 0) == len(realFloatingIdsInd):
+            tarsum = np.sum(tarval < 0)
+            if tarsum == len(realFloatingIdsInd):
                 posRctInd = realFloatingIdsInd[tarval < 0]
                 posRctProb = tarval/np.sum(tarval)
-            elif np.sum(tarval < 0) == 1 and all(tarval[tarval >= 0] == 0):
+            elif tarsum == 1 and all(tarval[tarval >= 0] == 0):
                 posRctInd = realFloatingIdsInd[tarval < 0]
                 posRctProb = [1]
             else:
-                posRctInd = np.append(realFloatingIdsInd[tarval < 0], realBoundaryIdsInd)
-                a = np.sum(tarval[tarval < 0])*((len(tarval[tarval < 0]))
-                                                +len(realBoundaryIdsInd))/len(tarval[tarval < 0])
-                posRctProb = np.append(tarval[tarval < 0]/a, 
-                                       np.repeat(1/(len(realBoundaryIdsInd)+len(tarval[tarval < 0])), 
-                                                 len(realBoundaryIdsInd)))
-            posPrdInd = np.append(realFloatingIdsInd[tarval >= 0], realBoundaryIdsInd)
-            posPrdProb = np.ones(len(posPrdInd))/len(posPrdInd)
+                b = tarval[tarval < 0]
+                a = np.sum(b)*(len(b)+1)/len(b)
+                posRctInd = np.empty(len(b)+len(realBoundaryIdsInd), dtype=int)
+                posRctInd[:len(b)] = realFloatingIdsInd[tarval < 0]
+                posRctInd[len(b):] = realBoundaryIdsInd
+                posRctProb = np.empty(len(posRctInd))
+                posRctProb[:len(b)] = b/a
+                posRctProb[len(b):] = 1/(len(realBoundaryIdsInd)*(1+len(b)))
+            c = len(realFloatingIdsInd)-tarsum
+            posPrdInd = np.empty(c+len(realBoundaryIdsInd), dtype=int)
+            posPrdInd[:c] = realFloatingIdsInd[tarval >= 0]
+            posPrdInd[c:] = realBoundaryIdsInd
+            posPrdProb = np.empty(len(posPrdInd))
+            posPrdProb[:c] = 1/((1+c))
+            posPrdProb[c:] = 1/(len(realBoundaryIdsInd)*(1+c))    
         else:
-            posRctInd = np.append(realFloatingIdsInd[tarval <= 0], realBoundaryIdsInd)
-            posPrdInd = np.append(realFloatingIdsInd[tarval >= 0], realBoundaryIdsInd)
-            posRctProb = np.ones(len(posRctInd))/len(posRctInd)
-            posPrdProb = np.ones(len(posPrdInd))/len(posPrdInd)
+            a = realFloatingIdsInd[tarval <= 0]
+            b = realFloatingIdsInd[tarval >= 0]
+            posRctInd = np.empty(len(a)+len(realBoundaryIdsInd), dtype=int)
+            posRctInd[:len(a)] = a
+            posRctInd[len(a):] = realBoundaryIdsInd
+            posPrdInd = np.empty(len(b)+len(realBoundaryIdsInd), dtype=int)
+            posPrdInd[:len(b)] = b
+            posPrdInd[len(b):] = realBoundaryIdsInd
+            
+            posRctProb = np.empty(len(posRctInd))
+            posRctProb[:len(a)] = 1/((1+len(a)))
+            posRctProb[len(a):] = 1/(len(realBoundaryIdsInd)*(1+len(a)))
+            
+            posPrdProb = np.empty(len(posPrdInd))
+            posPrdProb[:len(b)] = 1/((1+len(b)))
+            posPrdProb[len(b):] = 1/(len(realBoundaryIdsInd)*(1+len(b)))
         
         rct = [col[3] for col in reactionList]
         prd = [col[4] for col in reactionList]
