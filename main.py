@@ -27,7 +27,7 @@ class SettingsClass:
         # Load experimental input or preconfigured settings
         
         # Path to a custom model (default: None)
-        self.MODEL_INPUT = None
+        self.MODEL_INPUT = r'C:\Users\user\Desktop\models\17.xml'
         # Path to experimental data - not implemented (default: None)
         self.DATA_INPUT = None
         # Path to preconfigured settings (default: None)
@@ -41,7 +41,7 @@ class SettingsClass:
             
         # 'FFL_m', 'Linear_m', 'Nested_m', 'Branched_m', 'Feedback_m', 'sigPath'
         # 'FFL_r', 'Linear_r', 'Nested_r', 'Branched_r', 'Feedback_r'
-        self.modelType = 'Linear_m'
+        self.modelType = 'Branched_r'
         
         
         # General settings ====================================================
@@ -138,13 +138,13 @@ class SettingsClass:
         # Path to save the output
         self.EXPORT_PATH = './outputs/hanging'
         # Overwrite the contents if the folder exists
-        self.EXPORT_OVERWRITE = True
+        self.EXPORT_OVERWRITE = False
         # Create folders based on model names
         self.EXPORT_FORCE_MODELNAMES = False
         
         
         # Flag to run the algorithm - temporary
-        self.RUN = True
+        self.RUN = False
 
 
 def customGetScaledConcentrationControlCoefficientMatrix(r):
@@ -159,18 +159,18 @@ def customGetScaledConcentrationControlCoefficientMatrix(r):
 
     Returns
     -------
-    T4 : numpy.ndarray
-        Scale concentration control coefficient matrix.
+    T5 : numpy.ndarray
+        Scaled concentration control coefficient matrix.
     """
     
     re = r.simulate(0, 10000, 5)
-    r.steadyState()
+    # r.steadyState()
     uelast = r.getUnscaledElasticityMatrix()
     Nr = r.getNrMatrix()
     T1 = np.dot(Nr, uelast)
     LinkMatrix = r.getLinkMatrix()
     Jac = np.dot(T1, LinkMatrix)
-    T2 = Jac * (-1.0)
+    T2 = np.negative(Jac)
     Inv = np.linalg.inv(T2)
     T3 = np.dot(Inv, Nr)
     T4 = np.dot(LinkMatrix, T3)
@@ -178,9 +178,9 @@ def customGetScaledConcentrationControlCoefficientMatrix(r):
     a = np.tile(r.getReactionRates(), (np.shape(T4)[0], 1))
     b = np.tile(r.getFloatingSpeciesConcentrations(), (np.shape(T4)[1], 1)).T
     
-    T4 = np.multiply(T4, np.divide(a, b))
+    T5 = np.multiply(T4, np.divide(a, b))
     
-    return T4
+    return T5
 
 
 def check_duplicate_reaction(data):
@@ -219,7 +219,7 @@ def f1(k_list, *args):
         if np.isnan(objCCC).any():
             dist_obj = 1e6
         else:
-            objCCC[np.abs(objCCC) < 1e-8] = 0 # Set small values to zero
+            objCCC[np.abs(objCCC) < 1e-7] = 0 # Set small values to zero
             
             dist_obj = ((np.linalg.norm(realConcCC - objCCC))*(1 + np.sum(np.not_equal(np.sign(realConcCC), np.sign(objCCC)))))
     except:
@@ -452,6 +452,7 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
             try:
                 r = te.loada(antStr)
                 concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
+                # concCC = r.getScaledConcentrationControlCoefficientMatrix()
                 
                 counts = 0
                 countf = 0
@@ -472,7 +473,8 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
                         r.resetToOrigin()
                         r.setValues(r.getGlobalParameterIds(), res.x)
                         concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
-                        concCC[np.abs(concCC) < 1e-8] = 0
+                        # concCC = r.getScaledConcentrationControlCoefficientMatrix()
+                        concCC[np.abs(concCC) < 1e-7] = 0
                         
                         if np.isnan(concCC).any():
                             eval_dist[m] = mut_dist[m]
@@ -557,7 +559,7 @@ def initialize(Settings):
                 numGen += 1
                 if int(numGen/10000) == (numGen/10000):
                     print("Number of RL iterations = {}".format(numGen))
-                    
+        
         antStr = ng.generateAntimony(realFloatingIds, realBoundaryIds, 
                                      realFloatingIdsIndList, realBoundaryIdsIndList, 
                                      rl, boundary_init=realBoundaryVal)
@@ -565,6 +567,7 @@ def initialize(Settings):
         try:
             r = te.loada(antStr)
             concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
+            # concCC = r.getScaledConcentrationControlCoefficientMatrix()
             
             counts = 0
             countf = 0
@@ -588,7 +591,8 @@ def initialize(Settings):
                 else:
                     tracking.append(rl)
                 concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
-                concCC[np.abs(concCC) < 1e-8] = 0
+                # concCC = r.getScaledConcentrationControlCoefficientMatrix()
+                concCC[np.abs(concCC) < 1e-7] = 0
                 ens_concCC[numGoodModels] = concCC
                 
                 numGoodModels = numGoodModels + 1
@@ -673,6 +677,7 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv, Settings):
             try:
                 r = te.loada(antStr)
                 concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
+                # concCC = r.getScaledConcentrationControlCoefficientMatrix()
                 
                 counts = 0
                 countf = 0
@@ -701,7 +706,8 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv, Settings):
                         else:
                             tracking.append(rl)
                         concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
-                        concCC[np.abs(concCC) < 1e-8] = 0
+                        # concCC = r.getScaledConcentrationControlCoefficientMatrix()
+                        concCC[np.abs(concCC) < 1e-7] = 0
                         rnd_concCC[l] = concCC
                     else:
                         rnd_dist[l] = listDist[l]
@@ -839,8 +845,8 @@ if __name__ == '__main__':
     realFluxCC = realRR.getScaledFluxControlCoefficientMatrix()
     realConcCC = realRR.getScaledConcentrationControlCoefficientMatrix()
     
-    realFluxCC[np.abs(realFluxCC) < 1e-8] = 0
-    realConcCC[np.abs(realConcCC) < 1e-8] = 0
+    realFluxCC[np.abs(realFluxCC) < 1e-7] = 0
+    realConcCC[np.abs(realConcCC) < 1e-7] = 0
     
     # Number of Species and Ranges
     ns = realNumBoundary + realNumFloating # Number of species
@@ -1006,8 +1012,6 @@ if __name__ == '__main__':
             for i,j in enumerate(ens_model):
                 try:
                     r = te.loada(j)
-                    concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
-                    
                     p_bound = ng.generateParameterBoundary(r.getGlobalParameterIds())
                     res = scipy.optimize.differential_evolution(f1, args=(r,), 
                                         bounds=p_bound, maxiter=Settings.optiMaxIter, 
