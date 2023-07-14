@@ -221,6 +221,9 @@ def f1(k_list, *args):
         else:
             objCCC[np.abs(objCCC) < 1e-7] = 0 # Set small values to zero
             
+            if args[0].conservedMoiety:
+                objCCC = objCCC[np.argsort(args[0].getFloatingSpeciesIds())]
+            
             dist_obj = ((np.linalg.norm(realConcCC - objCCC))*(1 + np.sum(np.not_equal(np.sign(realConcCC), np.sign(objCCC)))))
     except:
         countf += 1
@@ -258,7 +261,6 @@ def callbackF(X, convergence=0.):
     return False
 
 def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind, Settings):
-
     global countf
     global counts
     global tracking
@@ -474,14 +476,15 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
                         r.setValues(r.getGlobalParameterIds(), res.x)
                         concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
                         # concCC = r.getScaledConcentrationControlCoefficientMatrix()
-                        concCC[np.abs(concCC) < 1e-7] = 0
-                        
                         if np.isnan(concCC).any():
                             eval_dist[m] = mut_dist[m]
                             eval_model[m] = mut_model[m]
                             eval_rl[m] = mut_rl[m]
                             eval_concCC[m] = mut_concCC[m]
                         else:
+                            concCC[np.abs(concCC) < 1e-7] = 0
+                            if r.conservedMoiety:
+                                concCC = concCC[np.argsort(r.getFloatingSpeciesIds())]
                             eval_dist[m] = res.fun
                             eval_model[m] = r.getAntimony(current=True)
                             eval_rl[m] = reactionList
@@ -593,6 +596,8 @@ def initialize(Settings):
                 concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
                 # concCC = r.getScaledConcentrationControlCoefficientMatrix()
                 concCC[np.abs(concCC) < 1e-7] = 0
+                if r.conservedMoiety:
+                    concCC = concCC[np.argsort(r.getFloatingSpeciesIds())]
                 ens_concCC[numGoodModels] = concCC
                 
                 numGoodModels = numGoodModels + 1
@@ -708,6 +713,8 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv, Settings):
                         concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
                         # concCC = r.getScaledConcentrationControlCoefficientMatrix()
                         concCC[np.abs(concCC) < 1e-7] = 0
+                        if r.conservedMoiety:
+                            concCC = concCC[np.argsort(r.getFloatingSpeciesIds())]
                         rnd_concCC[l] = concCC
                     else:
                         rnd_dist[l] = listDist[l]
@@ -802,6 +809,22 @@ if __name__ == '__main__':
         realRR = te.loada(realModel)
         # realRL = ng.generateReactionListFromAntimony(realModel)
     
+    # Control Coefficients and Fluxes
+    re = realRR.simulate(0, 10000, 5)
+    realSteadyState = realRR.getFloatingSpeciesConcentrations()
+    realSteadyStateRatio = np.divide(realSteadyState, np.min(realSteadyState))
+    realFlux = realRR.getReactionRates()
+    realRR.reset()
+    re = realRR.simulate(0, 10000, 5)
+    realFluxCC = realRR.getScaledFluxControlCoefficientMatrix()
+    realConcCC = realRR.getScaledConcentrationControlCoefficientMatrix()
+    
+    realFluxCC[np.abs(realFluxCC) < 1e-7] = 0
+    realConcCC[np.abs(realConcCC) < 1e-7] = 0
+    
+    if realRR.conservedMoietyAnalysis:
+        realConcCC = realConcCC[np.argsort(realRR.getFloatingSpeciesIds())]
+    
     # Species
     realNumFloating = realRR.getNumFloatingSpecies()
     
@@ -810,7 +833,7 @@ if __name__ == '__main__':
     for i in range(realNumFloating):
         realFloatingIds.append('S{}'.format(i))
         realFloatingIdsIndList.append(i)
-    fid_dict = dict(zip(realFloatingIds, realRR.getFloatingSpeciesIds()))
+    fid_dict = dict(zip(realFloatingIds, np.sort(realRR.getFloatingSpeciesIds())))
         
     realFloatingIdsInd = np.array(realFloatingIdsIndList)
     
@@ -832,21 +855,8 @@ if __name__ == '__main__':
         
     realBoundaryIdsInd = np.array(realBoundaryIdsIndList)
     
-    realReactionIds = realRR.getReactionIds()
-    realGlobalParameterIds = realRR.getGlobalParameterIds()
-    
-    # Control Coefficients and Fluxes
-    re = realRR.simulate(0, 10000, 5)
-    realSteadyState = realRR.getFloatingSpeciesConcentrations()
-    realSteadyStateRatio = np.divide(realSteadyState, np.min(realSteadyState))
-    realFlux = realRR.getReactionRates()
-    realRR.reset()
-    re = realRR.simulate(0, 10000, 5)
-    realFluxCC = realRR.getScaledFluxControlCoefficientMatrix()
-    realConcCC = realRR.getScaledConcentrationControlCoefficientMatrix()
-    
-    realFluxCC[np.abs(realFluxCC) < 1e-7] = 0
-    realConcCC[np.abs(realConcCC) < 1e-7] = 0
+    # realReactionIds = realRR.getReactionIds()
+    # realGlobalParameterIds = realRR.getGlobalParameterIds()
     
     # Number of Species and Ranges
     ns = realNumBoundary + realNumFloating # Number of species
