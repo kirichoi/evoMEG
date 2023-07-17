@@ -20,11 +20,29 @@ class Reversibility:
     IRREVERSIBLE = 0
     REVERSIBLE = 1
 
-class RP:
+class RP22:
+    UniUni = 0.5
+    BiUni = 0.2
+    UniBi = 0.2
+    BiBI  = 0.1
+    
+class RP11:
+    UniUni = 1
+    BiUni = 0.
+    UniBi = 0.
+    BiBI  = 0.
+
+class RP12:
     UniUni = 0.75
-    BiUni = 0.1
-    UniBi = 0.1
-    BiBI  = 0.05
+    BiUni = 0.
+    UniBi = 0.25
+    BiBI  = 0.
+    
+class RP21:
+    UniUni = 0.75
+    BiUni = 0.25
+    UniBi = 0.
+    BiBI  = 0.
     
 class RLP:
     Default = 1.
@@ -47,7 +65,7 @@ class REVP:
 #    return 3
      
 
-def pickReactionType():
+def pickReactionType(RP):
     rt1 = np.random.random()
     if rt1 < RP.UniUni:
         rType = ReactionType.UNIUNI
@@ -158,7 +176,7 @@ def generateReactionList(nsList, nrList, realFloatingIdsInd, realBoundaryIdsInd,
         rct = [col[3] for col in reactionList]
         prd = [col[4] for col in reactionList]
         
-        rType, regType, revType = pickReactionType()
+        rType, regType, revType = pickReactionType(RP22)
         
         if rType == ReactionType.UNIUNI:
             # UniUni
@@ -310,7 +328,212 @@ def getFullStoichiometryMatrix(reactionList, ns):
             st[product2, index] = st[product2, index] + 1
 
     return st
+
+
+def generateStoichiometry(realConcCC, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
+    
+    stoi = np.zeros((ns, nr), dtype=int)
+    rTypes = np.empty(nr, dtype=int)
+    regTypes = np.empty(nr, dtype=int)
+    revTypes = np.empty(nr, dtype=int)
+    
+    signs = np.sign(realConcCC)
+    
+    ordering = np.argsort(-np.sum(signs, axis=0))
+    
+    posrct = np.count_nonzero(signs<=0, axis=1)
+    posprd = np.count_nonzero(signs>=0, axis=1)
+    
+    # rprob = 1/np.sum(signs == -1, axis=1)
+    # pprob = 1/np.sum(signs == 1, axis=1)
+    
+    for r_idx in ordering:
         
+        # curr = np.sum(stoi, axis=1)[realFloatingIdsInd]
+        
+        rcts = signs[:,r_idx] <= 0
+        prds = signs[:,r_idx] >= 0
+        
+        rctthis = np.logical_and(posrct == 1, rcts)#posrct[rcts] == 1
+        rctna = np.logical_and(np.sum(stoi[realFloatingIdsInd] < 0, axis=1) == 0, rcts)
+        prdthis = np.logical_and(posprd == 1, prds)#posprd[prds] == 1
+        prdna = np.logical_and(np.sum(stoi[realFloatingIdsInd] > 0, axis=1) == 0, prds)
+        
+        c1 = np.sum(rcts)
+        c2 = np.sum(prds)#len(realFloatingIdsInd) - c1
+        
+        if c1 == 0:
+            posRctInd = realBoundaryIdsInd
+            posRctProb = np.empty(len(posRctInd))
+            posRctProb[:] = 1/(len(realBoundaryIdsInd))
+        elif c1 == len(realFloatingIdsInd):
+            posRctInd = realFloatingIdsInd
+            posRctProb = np.empty(len(posRctInd))
+            # a = 1/(len(realFloatingIdsInd))*np.exp(curr)
+            posRctProb[:] = 1/(len(realFloatingIdsInd))
+        else:
+            posRctInd = np.empty(c1+len(realBoundaryIdsInd), dtype=int)
+            posRctInd[:c1] = realFloatingIdsInd[rcts]
+            posRctInd[c1:] = realBoundaryIdsInd
+            posRctProb = np.empty(len(posRctInd))
+            # a = 1/(1+c1)*np.exp(curr[realFloatingIdsInd[rcts]])
+            posRctProb[:c1] = 1/(1+c1)
+            posRctProb[c1:] = 1/(len(realBoundaryIdsInd)*(1+c1))
+            posRctProb = posRctProb/np.sum(posRctProb)
+        
+        if c2 == 0:
+            posPrdInd = realBoundaryIdsInd
+            posPrdProb = np.empty(len(posPrdInd))
+            posPrdProb[:] = 1/(len(realBoundaryIdsInd))
+        elif c2 == len(realFloatingIdsInd):
+            posPrdInd = realFloatingIdsInd
+            posPrdProb = np.empty(len(posPrdInd))
+            # a = 1/(len(realFloatingIdsInd))*np.exp(-curr)
+            posPrdProb[:] = 1/(len(realFloatingIdsInd))
+        else:
+            posPrdInd = np.empty(c2+len(realBoundaryIdsInd), dtype=int)
+            posPrdInd[:c2] = realFloatingIdsInd[prds]
+            posPrdInd[c2:] = realBoundaryIdsInd
+            posPrdProb = np.empty(len(posPrdInd))
+            # a = 1/(1+c2)*np.exp(-curr[realFloatingIdsInd[prds]])
+            posPrdProb[:c2] = 1/(1+c2)
+            posPrdProb[c2:] = 1/(len(realBoundaryIdsInd)*(1+c2))
+            posPrdProb = posPrdProb/np.sum(posPrdProb)
+        
+        if len(posRctInd) == len(posPrdInd) == 1:
+            rType, regType, revType = pickReactionType(RP11)
+        elif len(posRctInd) == 1 and len(posPrdInd) == 2:
+            rType, regType, revType = pickReactionType(RP12)
+        elif len(posRctInd) == 2 and len(posPrdInd) == 1:
+            rType, regType, revType = pickReactionType(RP21)
+        else:
+            rType, regType, revType = pickReactionType(RP22)
+        rTypes[r_idx] = rType
+        regTypes[r_idx] = regType
+        revTypes[r_idx] = revType
+        
+        if rType == ReactionType.UNIUNI:
+            # UniUni
+            if rctthis.any() and rctna.any():
+                rct_id = realFloatingIdsInd[np.logical_and(rcts, np.logical_and(rctthis, rctna))]
+            else:
+                rct_id = np.random.choice(posRctInd, size=1, p=posRctProb)
+            if prdthis.any() and prdna.any():
+                prd_id = realFloatingIdsInd[np.logical_and(prds, np.logical_and(prdthis, prdna))]
+            else:
+                prd_id = np.random.choice(posPrdInd, size=1, p=posPrdProb)
+            
+            while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
+                   (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or
+                   (rct_id.tolist() == prd_id.tolist())):
+                if rctthis.any() and rctna.any():
+                    rct_id = realFloatingIdsInd[np.logical_and(rcts, np.logical_and(rctthis, rctna))]
+                else:
+                    rct_id = np.random.choice(posRctInd, size=1, p=posRctProb)
+                if prdthis.any() and prdna.any():
+                    prd_id = realFloatingIdsInd[np.logical_and(prds, np.logical_and(prdthis, prdna))]
+                else:
+                    prd_id = np.random.choice(posPrdInd, size=1, p=posPrdProb)
+            # stoi[rct_id,r_idx] = -1
+            # stoi[prd_id,r_idx] = 1
+        
+        if rType == ReactionType.BIUNI:
+            # BiUni
+            if rctthis.any() and rctna.any():
+                rct_id = realFloatingIdsInd[np.logical_and(rcts, np.logical_and(rctthis, rctna))]
+                rct_id = np.append(rct_id, np.random.choice(posRctInd, size=1, p=posRctProb))
+            else:
+                rct_id = np.random.choice(posRctInd, size=2, p=posRctProb)
+            if prdthis.any() and prdna.any():
+                prd_id = realFloatingIdsInd[np.logical_and(prds, np.logical_and(prdthis, prdna))]
+            else:
+                prd_id = np.random.choice(posPrdInd, size=1, p=posPrdProb)
+            
+            while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
+                   (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or
+                   (rct_id.tolist() == prd_id.tolist())):
+                if rctthis.any() and rctna.any():
+                    rct_id = realFloatingIdsInd[np.logical_and(rcts, np.logical_and(rctthis, rctna))]
+                    rct_id = np.append(rct_id, np.random.choice(posRctInd, size=1, p=posRctProb))
+                else:
+                    rct_id = np.random.choice(posRctInd, size=2, p=posRctProb)
+                if prdthis.any() and prdna.any():
+                    prd_id = realFloatingIdsInd[np.logical_and(prds, np.logical_and(prdthis, prdna))]
+                else:
+                    prd_id = np.random.choice(posPrdInd, size=1, p=posPrdProb)
+            # for s in rct_id:
+            #     stoi[s,r_idx] -= 1
+            # stoi[prd_id,r_idx] = 1
+        
+        if rType == ReactionType.UNIBI:
+            # UniBi
+            if rctthis.any() and rctna.any():
+                rct_id = realFloatingIdsInd[np.logical_and(rcts, np.logical_and(rctthis, rctna))]
+            else:
+                rct_id = np.random.choice(posRctInd, size=1, p=posRctProb)
+            if prdthis.any() and prdna.any():
+                prd_id = realFloatingIdsInd[np.logical_and(prds, np.logical_and(prdthis, prdna))]
+                prd_id = np.append(prd_id, np.random.choice(posPrdInd, size=1, p=posPrdProb))
+            else:
+                prd_id = np.random.choice(posPrdInd, size=2, p=posPrdProb)
+            
+            while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
+                   (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or
+                   (rct_id.tolist() == prd_id.tolist())):
+                if rctthis.any() and rctna.any():
+                    rct_id = realFloatingIdsInd[np.logical_and(rcts, np.logical_and(rctthis, rctna))]
+                else:
+                    rct_id = np.random.choice(posRctInd, size=1, p=posRctProb)
+                if prdthis.any() and prdna.any():
+                    prd_id = realFloatingIdsInd[np.logical_and(prds, np.logical_and(prdthis, prdna))]
+                    prd_id = np.append(prd_id, np.random.choice(posPrdInd, size=1, p=posPrdProb))
+                else:
+                    prd_id = np.random.choice(posPrdInd, size=2, p=posPrdProb)
+            # stoi[rct_id,r_idx] = -1
+            # for s in prd_id:
+            #     stoi[s,r_idx] += 1
+                
+        if rType == ReactionType.BIBI:
+            # BiBi
+            if rctthis.any() and rctna.any():
+                rct_id = realFloatingIdsInd[np.logical_and(rcts, np.logical_and(rctthis, rctna))]
+                rct_id = np.append(rct_id, np.random.choice(posRctInd, size=1, p=posRctProb))
+            else:
+                rct_id = np.random.choice(posRctInd, size=2, p=posRctProb)
+            if prdthis.any() and prdna.any():
+                prd_id = realFloatingIdsInd[np.logical_and(prds, np.logical_and(prdthis, prdna))]
+                prd_id = np.append(prd_id, np.random.choice(posPrdInd, size=1, p=posPrdProb))
+            else:
+                prd_id = np.random.choice(posPrdInd, size=2, p=posPrdProb)
+            
+            while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
+                   (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or
+                   (rct_id.tolist() == prd_id.tolist())):
+                if rctthis.any() and rctna.any():
+                    rct_id = realFloatingIdsInd[np.logical_and(rcts, np.logical_and(rctthis, rctna))]
+                    rct_id = np.append(rct_id, np.random.choice(posRctInd, size=1, p=posRctProb))
+                else:
+                    rct_id = np.random.choice(posRctInd, size=2, p=posRctProb)
+                if prdthis.any() and prdna.any():
+                    prd_id = realFloatingIdsInd[np.logical_and(prds, np.logical_and(prdthis, prdna))]
+                    prd_id = np.append(prd_id, np.random.choice(posPrdInd, size=1, p=posPrdProb))
+                else:
+                    prd_id = np.random.choice(posPrdInd, size=2, p=posPrdProb)
+        
+        for s in rct_id:
+            stoi[s,r_idx] -= 1
+        for s in prd_id:
+            stoi[s,r_idx] += 1
+                
+        posrct[rcts] -= 1
+        posprd[prds] -= 1
+    
+    rStoi = stoi[realFloatingIdsInd]
+    rStoi[rStoi > 1] = 1
+    rStoi[rStoi < -1] = -1
+    
+    return stoi, rStoi, rTypes, regTypes, revTypes
+
 
 # Removes boundary or orphan species from stoichiometry matrix
 def removeBoundaryNodes(st, nsList, nrList):
