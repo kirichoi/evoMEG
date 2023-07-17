@@ -337,6 +337,7 @@ def generateStoichiometry(realConcCC, realFloatingIdsInd, realBoundaryIdsInd, ns
     regTypes = np.empty(nr, dtype=int)
     revTypes = np.empty(nr, dtype=int)
     inhbactv = np.zeros((ns, nr), dtype=int)
+    failure = np.ones(nr, dtype=int)
     
     signs = np.sign(realConcCC)
     
@@ -531,7 +532,7 @@ def generateStoichiometry(realConcCC, realFloatingIdsInd, realBoundaryIdsInd, ns
             
             while (c<100 and (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
                    (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or
-                   (len(set(rct_id) & set(prd_id))>1))):
+                   (len(set(rct_id) & set(prd_id))>1)) or (rct_id.tolist() == prd_id.tolist())):
                 if np.logical_and(rctthis, rctna).any():
                     rct_id = realFloatingIdsInd[np.logical_and(rcts, np.logical_and(rctthis, rctna))]
                     rct_id = np.random.choice(rct_id, size=1)
@@ -556,7 +557,7 @@ def generateStoichiometry(realConcCC, realFloatingIdsInd, realBoundaryIdsInd, ns
             stoi[s,r_idx] -= 1
         for s in prd_id:
             stoi[s,r_idx] += 1
-                
+         
         posrct[rcts] -= 1
         posprd[prds] -= 1
     
@@ -596,13 +597,16 @@ def generateStoichiometry(realConcCC, realFloatingIdsInd, realBoundaryIdsInd, ns
         revTypes[r_idx] = revType
         
         if c == 100:
-            return False
+            failure[r_idx] = 0
         
     rStoi = stoi[realFloatingIdsInd]
     rStoi[rStoi > 1] = 1
     rStoi[rStoi < -1] = -1
     
-    return (stoi, rStoi, rTypes, regTypes, revTypes, inhbactv)
+    if np.sum(failure == 0) > 0:
+        return (stoi, rStoi, rTypes, regTypes, revTypes, inhbactv, False)
+    else:
+        return (stoi, rStoi, rTypes, regTypes, revTypes, inhbactv, True)
 
 
 # Removes boundary or orphan species from stoichiometry matrix
@@ -881,7 +885,7 @@ def generateSimpleRateLawStoich(rTypes, regTypes, revTypes, Jind, rct, prd, inhi
     INH = ''
     
     # T
-    T = T + '(Kf{}*'.format(Jind) + '*'
+    T = T + '(Kf{}*'.format(Jind)
     Klist.append('Kf{}'.format(Jind))
     
     for i,j in enumerate(rct):
