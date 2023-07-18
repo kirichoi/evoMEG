@@ -54,16 +54,6 @@ class REVP:
     Irreversible = 0.7
     Reversible = 0.3
 
-#def pickRateLawType():
-#    rt = np.random.random()
-#    if rt < RateLawProb.default:
-#        return 0
-#    elif rt < RateLawProb.default + RateLawProb.inhib:
-#        return 1
-#    elif rt < RateLawProb.default + RateLawProb.inhib + RateLawProb.activ:
-#        return 2
-#    return 3
-     
 
 def pickReactionType(RP):
     rt1 = np.random.random()
@@ -94,241 +84,6 @@ def pickReactionType(RP):
         
     return rType, regType, revType
 
-
-# Generates a reaction network in the form of a reaction list
-# reactionList = [nSpecies, reaction, ....]
-# reaction = [reactionType, [list of reactants], [list of product], rateConstant]
-def generateReactionList(nsList, nrList, realFloatingIdsInd, realBoundaryIdsInd, realConcCC):
-
-    reactionList = []
-    
-    # TODO: better heuristics (esp. probability)
-    
-    for r_idx in nrList:
-        tarval = realConcCC[:,r_idx]
-        ssum = np.sum(np.sign(tarval))
-        if ssum > 0:
-            tarsum = np.sum(tarval > 0)
-            c = len(realFloatingIdsInd)-tarsum
-            posRctInd = np.empty(c+len(realBoundaryIdsInd), dtype=int)
-            posRctInd[:c] = realFloatingIdsInd[tarval <= 0]
-            posRctInd[c:] = realBoundaryIdsInd
-            posRctProb = np.empty(len(posRctInd))
-            posRctProb[:c] = 1/((1+c))
-            posRctProb[c:] = 1/(len(realBoundaryIdsInd)*(1+c))
-            if tarsum == len(realFloatingIdsInd):
-                posPrdInd = realFloatingIdsInd[tarval > 0]
-                posPrdProb = tarval/np.sum(tarval)
-            elif tarsum == 1 and all(tarval[tarval <= 0] == 0):
-                posPrdInd = realFloatingIdsInd[tarval > 0]
-                posPrdProb = [1]
-            else:
-                b = tarval[tarval > 0]
-                a = np.sum(b)*(len(b)+1)/len(b)
-                posPrdInd = np.empty(len(b)+len(realBoundaryIdsInd), dtype=int)
-                posPrdInd[:len(b)] = realFloatingIdsInd[tarval > 0]
-                posPrdInd[len(b):] = realBoundaryIdsInd
-                posPrdProb = np.empty(len(posPrdInd))
-                posPrdProb[:len(b)] = b/a
-                posPrdProb[len(b):] = 1/(len(realBoundaryIdsInd)*(1+len(b)))
-        elif ssum < 0:
-            tarsum = np.sum(tarval < 0)
-            if tarsum == len(realFloatingIdsInd):
-                posRctInd = realFloatingIdsInd[tarval < 0]
-                posRctProb = tarval/np.sum(tarval)
-            elif tarsum == 1 and all(tarval[tarval >= 0] == 0):
-                posRctInd = realFloatingIdsInd[tarval < 0]
-                posRctProb = [1]
-            else:
-                b = tarval[tarval < 0]
-                a = np.sum(b)*(len(b)+1)/len(b)
-                posRctInd = np.empty(len(b)+len(realBoundaryIdsInd), dtype=int)
-                posRctInd[:len(b)] = realFloatingIdsInd[tarval < 0]
-                posRctInd[len(b):] = realBoundaryIdsInd
-                posRctProb = np.empty(len(posRctInd))
-                posRctProb[:len(b)] = b/a
-                posRctProb[len(b):] = 1/(len(realBoundaryIdsInd)*(1+len(b)))
-            c = len(realFloatingIdsInd)-tarsum
-            posPrdInd = np.empty(c+len(realBoundaryIdsInd), dtype=int)
-            posPrdInd[:c] = realFloatingIdsInd[tarval >= 0]
-            posPrdInd[c:] = realBoundaryIdsInd
-            posPrdProb = np.empty(len(posPrdInd))
-            posPrdProb[:c] = 1/((1+c))
-            posPrdProb[c:] = 1/(len(realBoundaryIdsInd)*(1+c))    
-        else:
-            a = realFloatingIdsInd[tarval <= 0]
-            b = realFloatingIdsInd[tarval >= 0]
-            posRctInd = np.empty(len(a)+len(realBoundaryIdsInd), dtype=int)
-            posRctInd[:len(a)] = a
-            posRctInd[len(a):] = realBoundaryIdsInd
-            posPrdInd = np.empty(len(b)+len(realBoundaryIdsInd), dtype=int)
-            posPrdInd[:len(b)] = b
-            posPrdInd[len(b):] = realBoundaryIdsInd
-            
-            posRctProb = np.empty(len(posRctInd))
-            posRctProb[:len(a)] = 1/((1+len(a)))
-            posRctProb[len(a):] = 1/(len(realBoundaryIdsInd)*(1+len(a)))
-            
-            posPrdProb = np.empty(len(posPrdInd))
-            posPrdProb[:len(b)] = 1/((1+len(b)))
-            posPrdProb[len(b):] = 1/(len(realBoundaryIdsInd)*(1+len(b)))
-        
-        rct = [col[3] for col in reactionList]
-        prd = [col[4] for col in reactionList]
-        
-        rType, regType, revType = pickReactionType(RP22)
-        
-        if rType == ReactionType.UNIUNI:
-            # UniUni
-            rct_id = np.random.choice(posRctInd, size=1, p=posRctProb).tolist()
-            prd_id = np.random.choice(posPrdInd, size=1, p=posPrdProb).tolist()
-            all_rct = [i for i,x in enumerate(rct) if x==rct_id]
-            all_prd = [i for i,x in enumerate(prd) if x==prd_id]
-            
-            while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
-                   (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or 
-                   (len(set(all_rct) & set(all_prd)) > 0)):
-                rct_id = np.random.choice(posRctInd, size=1, p=posRctProb).tolist()
-                prd_id = np.random.choice(posPrdInd, size=1, p=posPrdProb).tolist()
-                # Search for potentially identical reactions
-                all_rct = [i for i,x in enumerate(rct) if x==rct_id]
-                all_prd = [i for i,x in enumerate(prd) if x==prd_id]
-        elif rType == ReactionType.BIUNI:
-            # BiUni
-            rct_id = np.random.choice(posRctInd, size=2, replace=True, p=posRctProb).tolist()
-            prd_id = np.random.choice(posPrdInd, size=1, p=posPrdProb).tolist()
-            all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
-            all_prd = [i for i,x in enumerate(prd) if x==prd_id]
-            
-            while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
-                   (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or 
-                   (len(set(all_rct) & set(all_prd)) > 0)):
-                rct_id = np.random.choice(posRctInd, size=2, replace=True, p=posRctProb).tolist()
-                prd_id = np.random.choice(posPrdInd, size=1, p=posPrdProb).tolist()
-                # Search for potentially identical reactions
-                all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
-                all_prd = [i for i,x in enumerate(prd) if x==prd_id]
-        elif rType == ReactionType.UNIBI:
-            # UniBi
-            rct_id = np.random.choice(posRctInd, size=1, p=posRctProb).tolist()
-            prd_id = np.random.choice(posPrdInd, size=2, replace=True, p=posPrdProb).tolist()
-            all_rct = [i for i,x in enumerate(rct) if x==rct_id]
-            all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
-            
-            while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
-                   (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or 
-                   (len(set(all_rct) & set(all_prd)) > 0)):
-                rct_id = np.random.choice(posRctInd, size=1, p=posRctProb).tolist()
-                prd_id = np.random.choice(posPrdInd, size=2, replace=True, p=posPrdProb).tolist()
-                # Search for potentially identical reactions
-                all_rct = [i for i,x in enumerate(rct) if x==rct_id]
-                all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
-        else:
-            # BiBi
-            rct_id = np.random.choice(posRctInd, size=2, replace=True, p=posRctProb).tolist()
-            prd_id = np.random.choice(posPrdInd, size=2, replace=True, p=posPrdProb).tolist()
-            all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
-            all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
-            
-            while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
-                   (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or
-                   (len(set(all_rct) & set(all_prd)) > 0)):
-                rct_id = np.random.choice(posRctInd, size=2, replace=True, p=posRctProb).tolist()
-                prd_id = np.random.choice(posPrdInd, size=2, replace=True, p=posPrdProb).tolist()
-                # Search for potentially identical reactions
-                all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
-                all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
-                
-        if regType == RegulationType.DEFAULT:
-            act_id = []
-            inhib_id = []
-        elif regType == RegulationType.INHIBITION:
-            act_id = []
-            delList = np.concatenate([rct_id, prd_id])
-            if len(realBoundaryIdsInd) > 0:
-                delList = np.unique(np.append(delList, realBoundaryIdsInd))
-            cList = np.delete(nsList, delList)
-            if len(cList) == 0:
-                inhib_id = []
-                regType = RegulationType.DEFAULT
-            else:
-                inhib_id = np.random.choice(cList, size=1).tolist()
-        elif regType == RegulationType.ACTIVATION:
-            inhib_id = []
-            delList = np.concatenate([rct_id, prd_id])
-            if len(realBoundaryIdsInd) > 0:
-                delList = np.unique(np.append(delList, realBoundaryIdsInd))
-            cList = np.delete(nsList, delList)
-            if len(cList) == 0:
-                act_id = []
-                regType = RegulationType.DEFAULT
-            else:
-                act_id = np.random.choice(cList, size=1).tolist()
-        else:
-            delList = np.concatenate([rct_id, prd_id])
-            if len(realBoundaryIdsInd) > 0:
-                delList = np.unique(np.append(delList, realBoundaryIdsInd))
-            cList = np.delete(nsList, delList)
-            if len(cList) < 2:
-                act_id = []
-                inhib_id = []
-                regType = RegulationType.DEFAULT
-            else:
-                reg_id = np.random.choice(cList, size=2, replace=False)
-                act_id = [reg_id[0]]
-                inhib_id = [reg_id[1]]
-                
-        reactionList.append([rType, regType, revType, rct_id, prd_id, act_id, inhib_id])
-        
-    return reactionList
-    
-
-# Include boundary and floating species
-# Returns a list:
-# [New Stoichiometry matrix, list of floatingIds, list of boundaryIds]
-def getFullStoichiometryMatrix(reactionList, ns):
-    
-    st = np.zeros((ns, len(reactionList)), dtype=int)
-    
-    for index, rind in enumerate(reactionList):
-        if rind[0] == ReactionType.UNIUNI:
-            # UniUni
-            reactant = reactionList[index][3][0]
-            st[reactant, index] = st[reactant, index] - 1
-            product = reactionList[index][4][0]
-            st[product, index] = st[product, index] + 1
-     
-        elif rind[0] == ReactionType.BIUNI:
-            # BiUni
-            reactant1 = reactionList[index][3][0]
-            st[reactant1, index] = st[reactant1, index] - 1
-            reactant2 = reactionList[index][3][1]
-            st[reactant2, index] = st[reactant2, index] - 1
-            product = reactionList[index][4][0]
-            st[product, index] = st[product, index] + 1
-
-        elif rind[0] == ReactionType.UNIBI:
-            # UniBi
-            reactant1 = reactionList[index][3][0]
-            st[reactant1, index] = st[reactant1, index] - 1
-            product1 = reactionList[index][4][0]
-            st[product1, index] = st[product1, index] + 1
-            product2 = reactionList[index][4][1]
-            st[product2, index] = st[product2, index] + 1
-
-        else:
-            # BiBi
-            reactant1 = reactionList[index][3][0]
-            st[reactant1, index] = st[reactant1, index] - 1
-            reactant2 = reactionList[index][3][1]
-            st[reactant2, index] = st[reactant2, index] - 1
-            product1 = reactionList[index][4][0]
-            st[product1, index] = st[product1, index] + 1
-            product2 = reactionList[index][4][1]
-            st[product2, index] = st[product2, index] + 1
-
-    return st
-
 def boundaryFix(stoi, realBoundaryIdsInd, nr):
     
     newboundarystoi = np.zeros((len(realBoundaryIdsInd), nr), dtype=int)
@@ -344,7 +99,7 @@ def boundaryFix(stoi, realBoundaryIdsInd, nr):
     
     return newboundarystoi
     
-def generateStoichiometry(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
+def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
     
     stoi = np.zeros((ns, nr), dtype=int)
     rTypes = np.empty((3, nr), dtype=int)
@@ -392,7 +147,7 @@ def generateStoichiometry(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr)
         return (stoi, rStoi, rTypes, inhbactv, True)
 
 
-def generateSingleStoichiometry(realFloatingIdsInd, realBoundaryIdsInd, ns,
+def generateSingleStoichiometry(realFloatingIdsInd, realBoundaryIdsInd, ns, 
                                 rcts, rctthis, rctna, prds, prdthis, prdna):
     
     stoir = np.zeros(ns, dtype=int)
@@ -642,44 +397,6 @@ def generateSingleStoichiometry(realFloatingIdsInd, realBoundaryIdsInd, ns,
     return stoir, rTyper, inhbactv, f
 
 
-# Removes boundary or orphan species from stoichiometry matrix
-def removeBoundaryNodes(st, nsList, nrList):
-    
-    indexes = []
-    orphanSpecies = []
-    countBoundarySpecies = 0
-    for r in nsList: 
-        # Scan across the columns, count + and - coefficients
-        plusCoeff = 0; minusCoeff = 0
-        for c in nrList:
-            if st[r,c] < 0:
-                minusCoeff = minusCoeff + 1
-            elif st[r,c] > 0:
-                plusCoeff = plusCoeff + 1
-        if plusCoeff == 0 and minusCoeff == 0:
-            # No reaction attached to this species
-            orphanSpecies.append(r)
-        elif plusCoeff == 0 and minusCoeff != 0:
-            # Species is a source
-            indexes.append(r)
-            countBoundarySpecies = countBoundarySpecies + 1
-        elif minusCoeff == 0 and plusCoeff != 0:
-            # Species is a sink
-            indexes.append(r)
-            countBoundarySpecies = countBoundarySpecies + 1
-
-    floatingIds = np.delete(nsList, indexes+orphanSpecies, axis=0).astype(int)
-    boundaryIds = indexes
-    
-    rsm = st[floatingIds]
-    rsm[rsm>1] = 1
-    rsm[rsm<-1] = -1
-    
-    floatingIds = floatingIds.tolist()
-    
-    return rsm, floatingIds, boundaryIds
-
-
 def generateRateLaw(rl, floatingIds, boundaryIds, rlt, Jind):
     
     Klist = []
@@ -747,168 +464,8 @@ def generateRateLaw(rl, floatingIds, boundaryIds, rlt, Jind):
     return rateLaw, Klist
 
 
-def generateSimpleRateLaw(rind, Jind, real, tar):
-    
-    Klist = []
-    
-    T = ''
-    D = ''
-    ACT = ''
-    INH = ''
-    
-    # T
-    T = T + '(Kf' + str(Jind) + '*'
-    Klist.append('Kf' + str(Jind))
-    
-    for i in range(len(rind[3])):
-        T = T + real[tar.index(rind[3][i])]
-        if i < len(rind[3]) - 1:
-            T = T + '*'
-    
-    if rind[2] == Reversibility.REVERSIBLE:
-        T = T + ' - Kr' + str(Jind) + '*'
-        Klist.append('Kr' + str(Jind))
-        
-        for i in range(len(rind[4])):
-            T = T + real[tar.index(rind[4][i])]
-            if i < len(rind[4]) - 1:
-                T = T + '*'
-            
-    T = T + ')'
-        
-    # D
-    D = D + '1 + '
-    
-    for i in range(len(rind[3])):
-        D = D + real[tar.index(rind[3][i])]
-        if i < len(rind[3]) - 1:
-            D = D + '*'
-    
-    if rind[2] == Reversibility.REVERSIBLE:
-        D = D + ' + '
-        for i in range(len(rind[4])):
-            D = D + real[tar.index(rind[4][i])]
-            if i < len(rind[4]) - 1:
-                D = D + '*'
-    
-    # Activation
-    if (len(rind[5]) > 0):
-        for i in range(len(rind[5])):
-            ACT = ACT + '(1 + Ka' + str(Jind) + str(i) + '*'
-            Klist.append('Ka' + str(Jind) + str(i))
-            ACT = ACT + real[tar.index(rind[5][i])] + ')*'
-            
-    # Inhibition
-    if (len(rind[6]) > 0):
-        for i in range(len(rind[6])):
-            INH = INH + '(1/(1 + Ki' + str(Jind) + str(i) + '*'
-            Klist.append('Ki' + str(Jind) + str(i))
-            INH = INH + real[tar.index(rind[6][i])] + '))*'
-    
-    rateLaw = ACT + INH + T + '/(' + D + ')'
-        
-    return rateLaw, Klist
-
-
-def generateAntimony(floatingIds, boundaryIds, fid, bid, reactionList, boundary_init=None):
-    Klist = []
-    
-    real = floatingIds + boundaryIds
-    tar = fid + bid
-    
-    # List species
-    antStr = ''
-    if len(floatingIds) > 0:
-        antStr = antStr + 'var ' + str(floatingIds[0])
-        for index in floatingIds[1:]:
-            antStr = antStr + ', ' + str(index)
-        antStr = antStr + ';\n'
-    
-    if len(boundaryIds) > 0:
-        antStr = antStr + 'const ' + str(boundaryIds[0])
-        for index in boundaryIds[1:]:
-            antStr = antStr + ', ' + str(index)
-        antStr = antStr + ';\n'
-
-    # List reactions
-    for index, rind in enumerate(reactionList):
-        if rind[0] == ReactionType.UNIUNI:
-            # UniUni
-            antStr = antStr + 'J' + str(index) + ': ' + real[tar.index(rind[3][0])]
-            antStr = antStr + ' -> '
-            antStr = antStr + real[tar.index(rind[4][0])]
-            antStr = antStr + '; '
-            RateLaw, klist_i = generateSimpleRateLaw(rind, index, real, tar)
-            antStr = antStr + RateLaw
-            Klist.append(klist_i)
-        elif rind[0] == ReactionType.BIUNI:
-            # BiUni
-            antStr = antStr + 'J' + str(index) + ': ' + real[tar.index(rind[3][0])]
-            antStr = antStr + ' + '
-            antStr = antStr + real[tar.index(rind[3][1])]
-            antStr = antStr + ' -> '
-            antStr = antStr + real[tar.index(rind[4][0])]
-            antStr = antStr + '; '
-            RateLaw, klist_i = generateSimpleRateLaw(rind, index, real, tar)
-            antStr = antStr + RateLaw
-            Klist.append(klist_i)
-        elif rind[0] == ReactionType.UNIBI:
-            # UniBi
-            antStr = antStr + 'J' + str(index) + ': ' + real[tar.index(rind[3][0])]
-            antStr = antStr + ' -> '
-            antStr = antStr + real[tar.index(rind[4][0])]
-            antStr = antStr + ' + '
-            antStr = antStr + real[tar.index(rind[4][1])]
-            antStr = antStr + '; '
-            RateLaw, klist_i = generateSimpleRateLaw(rind, index, real, tar)
-            antStr = antStr + RateLaw
-            Klist.append(klist_i)
-        else:
-            # BiBi
-            antStr = antStr + 'J' + str(index) + ': ' + real[tar.index(rind[3][0])]
-            antStr = antStr + ' + '
-            antStr = antStr + real[tar.index(rind[3][1])]
-            antStr = antStr + ' -> '
-            antStr = antStr + real[tar.index(rind[4][0])]
-            antStr = antStr + ' + '
-            antStr = antStr + real[tar.index(rind[4][1])]
-            antStr = antStr + '; '
-            RateLaw, klist_i = generateSimpleRateLaw(rind, index, real, tar)
-            antStr = antStr + RateLaw
-            Klist.append(klist_i)
-        antStr = antStr + ';\n'
-
-    # List rate constants
-    antStr = antStr + '\n'
-    Klist_f = [item for sublist in Klist for item in sublist]
-    
-    for i in range(len(Klist_f)):
-        if Klist_f[i].startswith('Kf'):
-            antStr = antStr + Klist_f[i] + ' = 0.5\n'
-        elif Klist_f[i].startswith('Kr'):
-            antStr = antStr + Klist_f[i] + ' = 0.25\n'
-        elif Klist_f[i].startswith('Ka'):
-            antStr = antStr + Klist_f[i] + ' = 0.5\n'
-        elif Klist_f[i].startswith('Ki'):
-            antStr = antStr + Klist_f[i] + ' = 0.5\n'
-        
-    # Initialize boundary species
-    antStr = antStr + '\n'
-    if type(boundary_init) == type(None):
-        for index, bind in enumerate(boundaryIds):
-            antStr = antStr + str(bind) + ' = ' + str(np.random.randint(1,6)) + '\n'
-    else:
-        for index, bind in enumerate(boundaryIds):
-            antStr = antStr + str(bind) + ' = ' + str(boundary_init[index]) + '\n'
-    
-    # Initialize floating species
-    for index, find in enumerate(floatingIds):
-        antStr = antStr + str(find) + ' = ' + '1\n'
-        
-    return antStr
-     
-
-def generateSimpleRateLawStoich(regTypes, revTypes, Jind, rct, prd, inhibactiv, real):
+def generateSimpleRateLawStoich(regTypes, revTypes, Jind, rct, prd, inhibactiv, 
+                                real):
     
     Klist = []
     
@@ -973,8 +530,9 @@ def generateSimpleRateLawStoich(regTypes, revTypes, Jind, rct, prd, inhibactiv, 
         
     return rateLaw, Klist
 
-def generateAntfromStoich(realFloatingIds, realBoundaryIds, st, 
-                          rType, inhibactiv, boundary_init=None):
+
+def generateAntfromST(realFloatingIds, realBoundaryIds, st, rType, inhibactiv, 
+                      boundary_init=None):
     Klist = []
     
     real = np.array(realFloatingIds + realBoundaryIds)

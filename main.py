@@ -351,10 +351,8 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
             eval_ia[m] = mut_ia[m]
             eval_concCC[m] = mut_concCC[m]
         else:
-            antStr = ng.generateAntfromStoich(realFloatingIdsIndList, 
-                                              realBoundaryIdsIndList, 
-                                              stoi, rtype, ia, 
-                                              boundary_init=realBoundaryVal)
+            antStr = ng.generateAntfromST(realFloatingIdsIndList, realBoundaryIdsIndList, 
+                                          stoi, rtype, ia, boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
                 concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
@@ -459,10 +457,8 @@ def initialize(Settings):
         
         while (not f or sttsum != 0 or sttrank != realNumFloating or
                norct or noprd or alreadyexists):
-            st, stt, rType, ia, f = ng.generateStoichiometry(signs, 
-                                                             realFloatingIdsInd, 
-                                                             realBoundaryIdsInd, 
-                                                             ns, nr)
+            st, stt, rType, ia, f = ng.generateST(signs, realFloatingIdsInd, 
+                                                  realBoundaryIdsInd, ns, nr)
             sttsum = np.sum(stt)
             sttrank = np.linalg.matrix_rank(stt)
             noprd = any(np.sum(stt>0, axis=1) == 0)
@@ -474,10 +470,8 @@ def initialize(Settings):
                 print("Number of init. model gen. iter. = {}".format(numGen))
             if numGen > Settings.maxIter_init:
                 raise Exception("Failed to initialize. Population size may be too large.")
-        antStr = ng.generateAntfromStoich(realFloatingIds, 
-                                          realBoundaryIds, 
-                                          st, rType, ia, 
-                                          boundary_init=realBoundaryVal)
+        antStr = ng.generateAntfromST(realFloatingIds, realBoundaryIds, 
+                                      st, rType, ia, boundary_init=realBoundaryVal)
         try:
             r = te.loada(antStr)
             concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
@@ -571,10 +565,8 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtype,
         
         while (not f or sttsum != 0 or sttrank != realNumFloating or
                norct or noprd or alreadyexists) and (d < Settings.maxIter_gen):
-            st, stt, rType, ia, f = ng.generateStoichiometry(signs, 
-                                                             realFloatingIdsInd, 
-                                                             realBoundaryIdsInd, 
-                                                             ns, nr)
+            st, stt, rType, ia, f = ng.generateST(signs, realFloatingIdsInd, 
+                                                  realBoundaryIdsInd, ns, nr)
             sttsum = np.sum(stt)
             sttrank = np.linalg.matrix_rank(stt)
             noprd = any(np.sum(stt>0, axis=1) == 0)
@@ -589,10 +581,8 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtype,
             rnd_ia[l] = listia[l]
             rnd_concCC[l] = listconcCC[l]
         else:
-            antStr = ng.generateAntfromStoich(realFloatingIds, 
-                                              realBoundaryIds, 
-                                              st, rType, ia, 
-                                              boundary_init=realBoundaryVal)
+            antStr = ng.generateAntfromST(realFloatingIds, realBoundaryIds, 
+                                          st, rType, ia, boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
                 concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
@@ -976,10 +966,9 @@ if __name__ == '__main__':
         for i,j in enumerate(ens_stoi):
             r = te.loada(ens_model[i])
             param = r.getGlobalParameterValues()
-            newAnt = ng.generateAntfromStoich(list(fid_dict.values()), 
-                                              list(bid_dict.values()),
-                                              j, ens_rtype[i], ens_inhabactiv[i],
-                                              boundary_init=realBoundaryVal)
+            newAnt = ng.generateAntfromST(list(fid_dict.values()), list(bid_dict.values()),
+                                          j, ens_rtype[i], ens_inhabactiv[i],
+                                          boundary_init=realBoundaryVal)
             # TODO: remove
             r = te.loada(newAnt)
             r.setValues(r.getGlobalParameterIds(), param)
