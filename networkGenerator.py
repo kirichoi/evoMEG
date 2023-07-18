@@ -606,7 +606,7 @@ def generateStoichiometry(realConcCC, realFloatingIdsInd, realBoundaryIdsInd, ns
     if np.sum(failure == 0) > 0:
         return (stoi, rStoi, rTypes, regTypes, revTypes, inhbactv, False)
     else:
-        return (stoi, rStoi, rTypes, regTypes, revTypes, inhbactv, True)
+        return (stoi, rStoi, [rTypes, regTypes, revTypes], inhbactv, True)
 
 
 # Removes boundary or orphan species from stoichiometry matrix
@@ -875,7 +875,7 @@ def generateAntimony(floatingIds, boundaryIds, fid, bid, reactionList, boundary_
     return antStr
      
 
-def generateSimpleRateLawStoich(rTypes, regTypes, revTypes, Jind, rct, prd, inhibactiv, real):
+def generateSimpleRateLawStoich(regTypes, revTypes, Jind, rct, prd, inhibactiv, real):
     
     Klist = []
     
@@ -941,7 +941,7 @@ def generateSimpleRateLawStoich(rTypes, regTypes, revTypes, Jind, rct, prd, inhi
     return rateLaw, Klist
 
 def generateAntfromStoich(realFloatingIdsIndList, realBoundaryIdsIndList, st, 
-                          r1, r2, r3, inhibactiv, boundary_init=None):
+                          rType, inhibactiv, boundary_init=None):
     Klist = []
     
     real = np.array(realFloatingIdsIndList + realBoundaryIdsIndList)
@@ -962,32 +962,29 @@ def generateAntfromStoich(realFloatingIdsIndList, realBoundaryIdsIndList, st,
     for index, rind in enumerate(st.T):
         rct = real[rind<0]
         prd = real[rind>0]
-        if r1[index] == ReactionType.UNIUNI:
+        if rType[0][index] == ReactionType.UNIUNI:
             # UniUni
             antStr = antStr + 'J{}: S{} -> S{}; '.format(index, rct[0], prd[0])
-            RateLaw, klist_i = generateSimpleRateLawStoich(r1[index], r2[index], 
-                                                           r3[index], index, rct, 
-                                                           prd, inhibactiv, real)
+            RateLaw, klist_i = generateSimpleRateLawStoich(rType[1][index], rType[2][index], 
+                                                           index, rct, prd, inhibactiv, real)
             antStr = antStr + RateLaw
             Klist.append(klist_i)
-        elif r1[index] == ReactionType.BIUNI:
+        elif rType[0][index] == ReactionType.BIUNI:
             # BiUni
             if len(rct) == 1:
                 rct = np.repeat(rct, 2)
             antStr = antStr + 'J{}: S{} + S{} -> S{}; '.format(index, rct[0], rct[1], prd[0])
-            RateLaw, klist_i = generateSimpleRateLawStoich(r1[index], r2[index], 
-                                                           r3[index], index, rct, 
-                                                           prd, inhibactiv, real)
+            RateLaw, klist_i = generateSimpleRateLawStoich(rType[1][index], rType[2][index], 
+                                                           index, rct, prd, inhibactiv, real)
             antStr = antStr + RateLaw
             Klist.append(klist_i)
-        elif r1[index] == ReactionType.UNIBI:
+        elif rType[0][index] == ReactionType.UNIBI:
             # UniBi
             if len(prd) == 1:
                 prd = np.repeat(prd, 2)
             antStr = antStr + 'J{}: S{} -> S{} + S{}; '.format(index, rct[0], prd[0], prd[1])
-            RateLaw, klist_i = generateSimpleRateLawStoich(r1[index], r2[index], 
-                                                           r3[index], index, rct, 
-                                                           prd, inhibactiv, real)
+            RateLaw, klist_i = generateSimpleRateLawStoich(rType[1][index], rType[2][index], 
+                                                           index, rct, prd, inhibactiv, real)
             antStr = antStr + RateLaw
             Klist.append(klist_i)
         else:
@@ -998,9 +995,8 @@ def generateAntfromStoich(realFloatingIdsIndList, realBoundaryIdsIndList, st,
                 prd = np.repeat(prd, 2)
             antStr = antStr + 'J{}: S{} + S{} -> S{} + S{}; '.format(index, rct[0], 
                                                                     rct[1], prd[0], prd[1])
-            RateLaw, klist_i = generateSimpleRateLawStoich(r1[index], r2[index], 
-                                                           r3[index], index, rct, 
-                                                           prd, inhibactiv, real)
+            RateLaw, klist_i = generateSimpleRateLawStoich(rType[1][index], rType[0][index], 
+                                                           index, rct, prd, inhibactiv, real)
             antStr = antStr + RateLaw
             Klist.append(klist_i)
         antStr = antStr + ';\n'
