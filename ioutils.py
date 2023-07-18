@@ -76,6 +76,7 @@ def validateSettings(Settings):
     assert(isinstance(Settings.ens_size, int)), 'Invalid ens_size'
     assert(isinstance(Settings.pass_size, int)), 'Invalid pass_size'
     assert(isinstance(Settings.top_p, float) and Settings.top_p<=1), 'Invalid top_p'
+    assert(isinstance(Settings.maxIter_init, int)), 'Invalid maxIter_init'
     assert(isinstance(Settings.maxIter_gen, int)), 'Invalid maxIter_gen'
     assert(isinstance(Settings.maxIter_mut, int)), 'Invalid maxIter_mut'
     assert(isinstance(Settings.recomb, float) and Settings.recomb<=1), 'Invalid recomb'
@@ -138,6 +139,7 @@ def exportSettings(Settings, path=None):
     outputtxt.writelines('thres_median: {}'.format(Settings.thres_median) + '\n')
     outputtxt.writelines('thres_shortest: {}'.format(Settings.thres_shortest) + '\n')
     outputtxt.writelines('thres_top: {}'.format(Settings.thres_top) + '\n')
+    outputtxt.writelines('maxIter_init: {}'.format(Settings.maxIter_init) + '\n')
     outputtxt.writelines('maxIter_gen: {}'.format(Settings.maxIter_gen) + '\n')
     outputtxt.writelines('maxIter_mut: {}'.format(Settings.maxIter_mut) + '\n')
     outputtxt.writelines('recomb: {}'.format(Settings.recomb) + '\n')
