@@ -27,7 +27,7 @@ class SettingsClass:
         # Load experimental input or preconfigured settings
         
         # Path to a custom model (default: None)
-        self.MODEL_INPUT = None#r'C:\Users\user\Desktop\models\19.xml'
+        self.MODEL_INPUT = None#r'C:\Users\user\Desktop\models\17.xml'
         # Path to experimental data - not implemented (default: None)
         self.DATA_INPUT = None
         # Path to preconfigured settings (default: None)
@@ -41,7 +41,7 @@ class SettingsClass:
             
         # 'FFL_m', 'Linear_m', 'Nested_m', 'Branched_m', 'Feedback_m', 'sigPath'
         # 'FFL_r', 'Linear_r', 'Nested_r', 'Branched_r', 'Feedback_r'
-        self.modelType = 'FFL_m'
+        self.modelType = 'Linear_m'
         
         
         # General settings ====================================================
@@ -122,29 +122,29 @@ class SettingsClass:
         # Plotting settings ===================================================
         
         # Flag to visualize plot
-        self.SHOW_PLOT = True
+        self.SHOW_PLOT = False
         # Flag to save figures
-        self.SAVE_PLOT = True
+        self.SAVE_PLOT = False
         
         
         # Export settings =====================================================
             
         # Flag to collect all models in the ensemble
-        self.EXPORT_ALL_MODELS = True
+        self.EXPORT_ALL_MODELS = False
         # Flag to save collected models
-        self.EXPORT_OUTPUT = True
+        self.EXPORT_OUTPUT = False
         # Flag to save current settings
-        self.EXPORT_SETTINGS = True
+        self.EXPORT_SETTINGS = False
         # Path to save the output
         self.EXPORT_PATH = './outputs/newRanGenTest'
         # Overwrite the contents if the folder exists
-        self.EXPORT_OVERWRITE = True
+        self.EXPORT_OVERWRITE = False
         # Create folders based on model names
         self.EXPORT_FORCE_MODELNAMES = False
         
         
         # Flag to run the algorithm - temporary
-        self.RUN = True
+        self.RUN = False
 
 
 def customGetScaledConcentrationControlCoefficientMatrix(r):
@@ -260,7 +260,7 @@ def callbackF(X, convergence=0.):
     print("{}, {}".format(counts,countf))
     return False
 
-def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtype, 
+def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtypes, 
                                ens_inhabactiv, ens_concCC, minind, mutind):
     global countf
     global counts
@@ -269,18 +269,18 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
     eval_dist = np.empty(Settings.mut_size)
     eval_model = np.empty(Settings.mut_size, dtype='object')
     eval_stoi = np.empty((Settings.mut_size, ns, nr), dtype=int)
-    eval_rtype = np.empty((Settings.mut_size, 3, nr), dtype=int)
+    eval_rtypes = np.empty((Settings.mut_size, 3, nr), dtype=int)
     eval_ia = np.empty((Settings.mut_size, ns, nr), dtype=int)
     eval_concCC = np.empty(Settings.mut_size, dtype='object')
     
     mut_dist = ens_dist[mutind]
     mut_model = ens_model[mutind]
     mut_stoi = ens_stoi[mutind]
-    mut_rtype = ens_rtype[mutind]
+    mut_rtypes = ens_rtypes[mutind]
     mut_ia = ens_inhabactiv[mutind]
     mut_concCC = ens_concCC[mutind]
     
-    signs = np.sign(realConcCC)
+    signs = np.sign(realConcCC).astype(int)
     posrct = np.count_nonzero(signs<=0, axis=1)
     posprd = np.count_nonzero(signs>=0, axis=1)
     
@@ -298,7 +298,7 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
             
             stoi = copy.deepcopy(mut_stoi[m])
             stoi[:,r_idx] = np.zeros(ns)
-            rtype = copy.deepcopy(mut_rtype[m])
+            rtypes = copy.deepcopy(mut_rtypes[m])
             ia = copy.deepcopy(mut_ia[m])
             
             effposrct = np.count_nonzero(stoi[realFloatingIdsInd]<0, axis=1)
@@ -314,15 +314,13 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
                 
                 rctthis = np.logical_and(posrct == 1, rcts)
                 currrct = np.sum(stoi[realFloatingIdsInd] < 0, axis=1)
-                rctna = np.logical_and(currrct == 0, rcts)
                 prdthis = np.logical_and(posprd == 1, prds)
                 currprd = np.sum(stoi[realFloatingIdsInd] > 0, axis=1)
-                prdna = np.logical_and(currprd == 0, prds)
                 
                 stoir, rTyper, iar, f = ng.generateSingleStoichiometry(realFloatingIdsInd, realBoundaryIdsInd, ns,
-                                                                       rcts, rctthis, rctna, prds, prdthis, prdna)
+                                                                       rcts, rctthis, currrct, prds, prdthis, currprd)
                 stoi[:,r_idx] = stoir
-                rtype[:,r_idx] = rTyper
+                rtypes[:,r_idx] = rTyper
                 ia[:,r_idx] = iar
             
             stt = stoi[realFloatingIdsInd]
@@ -347,12 +345,12 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
             eval_dist[m] = mut_dist[m]
             eval_model[m] = mut_model[m]
             eval_stoi[m] = mut_stoi[m]
-            eval_rtype[m] = mut_rtype[m]
+            eval_rtypes[m] = mut_rtypes[m]
             eval_ia[m] = mut_ia[m]
             eval_concCC[m] = mut_concCC[m]
         else:
             antStr = ng.generateAntfromST(realFloatingIdsIndList, realBoundaryIdsIndList, 
-                                          stoi, rtype, ia, boundary_init=realBoundaryVal)
+                                          stoi, rtypes, ia, boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
                 concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
@@ -371,7 +369,7 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
                     eval_dist[m] = mut_dist[m]
                     eval_model[m] = mut_model[m]
                     eval_stoi[m] = mut_stoi[m]
-                    eval_rtype[m] = mut_rtype[m]
+                    eval_rtypes[m] = mut_rtypes[m]
                     eval_ia[m] = mut_ia[m]
                     eval_concCC[m] = mut_concCC[m]
                 else:
@@ -384,7 +382,7 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
                             eval_dist[m] = mut_dist[m]
                             eval_model[m] = mut_model[m]
                             eval_stoi[m] = mut_stoi[m]
-                            eval_rtype[m] = mut_rtype[m]
+                            eval_rtypes[m] = mut_rtypes[m]
                             eval_ia[m] = mut_ia[m]
                             eval_concCC[m] = mut_concCC[m]
                         else:
@@ -395,21 +393,21 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
                             eval_model[m] = r.getAntimony(current=True)
                             eval_stoi[m] = stoi
                             tracking.append(stt.tolist())
-                            eval_rtype[m] = rtype
+                            eval_rtypes[m] = rtypes
                             eval_ia[m] = ia
                             eval_concCC[m] = concCC
                     else:
                         eval_dist[m] = mut_dist[m]
                         eval_model[m] = mut_model[m]
                         eval_stoi[m] = mut_stoi[m]
-                        eval_rtype[m] = mut_rtype[m]
+                        eval_rtypes[m] = mut_rtypes[m]
                         eval_ia[m] = mut_ia[m]
                         eval_concCC[m] = mut_concCC[m]
             except:
                 eval_dist[m] = mut_dist[m]
                 eval_model[m] = mut_model[m]
                 eval_stoi[m] = mut_stoi[m]
-                eval_rtype[m] = mut_rtype[m]
+                eval_rtypes[m] = mut_rtypes[m]
                 eval_ia[m] = mut_ia[m]
                 eval_concCC[m] = mut_concCC[m]
         
@@ -420,7 +418,7 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
             antimony.clearPreviousLoads()
             antimony.freeAll()
 
-    return (eval_dist, eval_model, eval_stoi, eval_rtype, eval_ia, eval_concCC)
+    return (eval_dist, eval_model, eval_stoi, eval_rtypes, eval_ia, eval_concCC)
 
 
 def initialize(Settings):
@@ -437,12 +435,12 @@ def initialize(Settings):
     ens_dist = np.empty(Settings.ens_size)
     ens_model = np.empty(Settings.ens_size, dtype='object')
     ens_stoi = np.empty((Settings.ens_size, ns, nr), dtype=int)
-    ens_rtype = np.empty((Settings.ens_size, 3, nr), dtype=int)
+    ens_rtypes = np.empty((Settings.ens_size, 3, nr), dtype=int)
     ens_inhabactiv = np.empty((Settings.ens_size, ns, nr), dtype=int)
     tracking = []
     ens_concCC = np.empty(Settings.ens_size, dtype='object')
     
-    signs = np.sign(realConcCC)
+    signs = np.sign(realConcCC).astype(int)
     
     # Initial Random generation
     while (numGoodModels < Settings.ens_size):
@@ -453,12 +451,11 @@ def initialize(Settings):
         noprd = True
         norct = True
         alreadyexists = True
-        f = False
         
-        while (not f or sttsum != 0 or sttrank != realNumFloating or
+        while (sttsum != 0 or sttrank != realNumFloating or
                norct or noprd or alreadyexists):
-            st, stt, rType, ia, f = ng.generateST(signs, realFloatingIdsInd, 
-                                                  realBoundaryIdsInd, ns, nr)
+            st, stt, rTypes, ia = ng.generateST(signs, realFloatingIdsInd, 
+                                                realBoundaryIdsInd, ns, nr)
             sttsum = np.sum(stt)
             sttrank = np.linalg.matrix_rank(stt)
             noprd = any(np.sum(stt>0, axis=1) == 0)
@@ -471,7 +468,7 @@ def initialize(Settings):
             if numGen > Settings.maxIter_init:
                 raise Exception("Failed to initialize. Population size may be too large.")
         antStr = ng.generateAntfromST(realFloatingIds, realBoundaryIds, 
-                                      st, rType, ia, boundary_init=realBoundaryVal)
+                                      st, rTypes, ia, boundary_init=realBoundaryVal)
         try:
             r = te.loada(antStr)
             concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
@@ -495,7 +492,7 @@ def initialize(Settings):
                 ens_model[numGoodModels] = r.getAntimony(current=True)
                 ens_stoi[numGoodModels] = st
                 tracking.append(stt.tolist())
-                ens_rtype[numGoodModels] = rType
+                ens_rtypes[numGoodModels] = rTypes
                 ens_inhabactiv[numGoodModels] = ia
                 concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
                 # concCC = r.getScaledConcentrationControlCoefficientMatrix()
@@ -504,9 +501,10 @@ def initialize(Settings):
                     concCC = concCC[np.argsort(r.getFloatingSpeciesIds())]
                 ens_concCC[numGoodModels] = concCC
                 
-                numGoodModels = numGoodModels + 1
+                numGoodModels += 1
+                print(numGoodModels)
         except:
-            numBadModels = numBadModels + 1
+            numBadModels += 1
         
         numIter = numIter + 1
         if int(numIter/100) == (numIter/100):
@@ -525,10 +523,10 @@ def initialize(Settings):
     print("Number of total iterations = {}".format(numIter))
     print("Number of bad models = {}".format(numBadModels))
     
-    return (ens_dist, ens_model, ens_stoi, ens_rtype, ens_inhabactiv, ens_concCC, tracking)
+    return (ens_dist, ens_model, ens_stoi, ens_rtypes, ens_inhabactiv, ens_concCC, tracking)
 
 
-def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtype, 
+def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtypes, 
                ens_inhabactiv, ens_concCC, mut_ind_inv):
     
     global countf
@@ -538,7 +536,7 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtype,
     listAntStr = ens_model[mut_ind_inv]
     listDist = ens_dist[mut_ind_inv]
     liststoi = ens_stoi[mut_ind_inv]
-    listrtype = ens_rtype[mut_ind_inv]
+    listrtypes = ens_rtypes[mut_ind_inv]
     listia = ens_inhabactiv[mut_ind_inv]
     listconcCC = ens_concCC[mut_ind_inv]
     
@@ -547,11 +545,11 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtype,
     rnd_dist = np.empty(rndSize)
     rnd_model = np.empty(rndSize, dtype='object')
     rnd_stoi = np.empty((rndSize, ns, nr), dtype=int)
-    rnd_rtype = np.empty((rndSize, 3, nr), dtype=int)
+    rnd_rtypes = np.empty((rndSize, 3, nr), dtype=int)
     rnd_ia = np.empty((rndSize, ns, nr), dtype=int)
     rnd_concCC = np.empty(rndSize, dtype='object')
     
-    signs = np.sign(realConcCC)
+    signs = np.sign(realConcCC).astype(int)
     
     for l in range(rndSize):
         d = 0
@@ -561,28 +559,28 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtype,
         noprd = True
         norct = True
         alreadyexists = True
-        f = False
         
-        while (not f or sttsum != 0 or sttrank != realNumFloating or
+        while (sttsum != 0 or sttrank != realNumFloating or
                norct or noprd or alreadyexists) and (d < Settings.maxIter_gen):
-            st, stt, rType, ia, f = ng.generateST(signs, realFloatingIdsInd, 
-                                                  realBoundaryIdsInd, ns, nr)
+            st, stt, rTypes, ia = ng.generateST(signs, realFloatingIdsInd, 
+                                                realBoundaryIdsInd, ns, nr)
             sttsum = np.sum(stt)
             sttrank = np.linalg.matrix_rank(stt)
             noprd = any(np.sum(stt>0, axis=1) == 0)
             norct = any(np.sum(stt<0, axis=1) == 0)
             alreadyexists = stt.tolist() in tracking
             d += 1
+            
         if d >= Settings.maxIter_gen:
             rnd_dist[l] = listDist[l]
             rnd_model[l] = listAntStr[l]
             rnd_stoi[l] = liststoi[l]
-            rnd_rtype[l] = listrtype[l]
+            rnd_rtypes[l] = listrtypes[l]
             rnd_ia[l] = listia[l]
             rnd_concCC[l] = listconcCC[l]
         else:
             antStr = ng.generateAntfromST(realFloatingIds, realBoundaryIds, 
-                                          st, rType, ia, boundary_init=realBoundaryVal)
+                                          st, rTypes, ia, boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
                 concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
@@ -602,7 +600,7 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtype,
                     rnd_dist[l] = listDist[l]
                     rnd_model[l] = listAntStr[l]
                     rnd_stoi[l] = liststoi[l]
-                    rnd_rtype[l] = listrtype[l]
+                    rnd_rtypes[l] = listrtypes[l]
                     rnd_ia[l] = listia[l]
                     rnd_concCC[l] = listconcCC[l]
                 else:
@@ -613,7 +611,7 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtype,
                         rnd_model[l] = r.getAntimony(current=True)
                         tracking.append(stt.tolist())
                         rnd_stoi[l] = st
-                        rnd_rtype[l] = rType
+                        rnd_rtypes[l] = rTypes
                         rnd_ia[l] = ia
                         concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
                         # concCC = r.getScaledConcentrationControlCoefficientMatrix()
@@ -625,14 +623,14 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtype,
                         rnd_dist[l] = listDist[l]
                         rnd_model[l] = listAntStr[l]
                         rnd_stoi[l] = liststoi[l]
-                        rnd_rtype[l] = listrtype[l]
+                        rnd_rtypes[l] = listrtypes[l]
                         rnd_ia[l] = listia[l]
                         rnd_concCC[l] = listconcCC[l]
             except:
                 rnd_dist[l] = listDist[l]
                 rnd_model[l] = listAntStr[l]
                 rnd_stoi[l] = liststoi[l]
-                rnd_rtype[l] = listrtype[l]
+                rnd_rtypes[l] = listrtypes[l]
                 rnd_ia[l] = listia[l]
                 rnd_concCC[l] = listconcCC[l]
         
@@ -643,7 +641,7 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtype,
             antimony.clearPreviousLoads()
             antimony.freeAll()
             
-    return (rnd_dist, rnd_model, rnd_stoi, rnd_rtype, rnd_ia, rnd_concCC)
+    return (rnd_dist, rnd_model, rnd_stoi, rnd_rtypes, rnd_ia, rnd_concCC)
 
 
 def argparse(argv):
@@ -809,7 +807,7 @@ if __name__ == '__main__':
         memory.append(process.memory_info().rss)
         
         # Initialize
-        (ens_dist, ens_model, ens_stoi, ens_rtype, ens_inhabactiv, ens_concCC, 
+        (ens_dist, ens_model, ens_stoi, ens_rtypes, ens_inhabactiv, ens_concCC, 
          tracking) = initialize(Settings)
 
         memory.append(process.memory_info().rss)
@@ -852,12 +850,12 @@ if __name__ == '__main__':
             mutind_inv = np.setdiff1d(ens_idx, mutind)
             
             evol_output = mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, 
-                                                     ens_stoi, ens_rtype, ens_inhabactiv, 
+                                                     ens_stoi, ens_rtypes, ens_inhabactiv, 
                                                      ens_concCC, minind, mutind)
             ens_dist[mutind] = evol_output[0]
             ens_model[mutind] = evol_output[1]
             ens_stoi[mutind] = evol_output[2]
-            ens_rtype[mutind] = evol_output[3]
+            ens_rtypes[mutind] = evol_output[3]
             ens_inhabactiv[mutind] = evol_output[4]
             ens_concCC[mutind] = evol_output[5]
             
@@ -874,11 +872,11 @@ if __name__ == '__main__':
             # if breakFlag:
             #     break
             rnd_output = random_gen(Settings, ens_model, ens_dist, ens_stoi, 
-                                    ens_rtype, ens_inhabactiv, ens_concCC, mutind_inv)
+                                    ens_rtypes, ens_inhabactiv, ens_concCC, mutind_inv)
             ens_dist[mutind_inv] = rnd_output[0]
             ens_model[mutind_inv] = rnd_output[1]
             ens_stoi[mutind_inv] = rnd_output[2]
-            ens_rtype[mutind_inv] = rnd_output[3]
+            ens_rtypes[mutind_inv] = rnd_output[3]
             ens_inhabactiv[mutind_inv] = rnd_output[4]
             ens_concCC[mutind_inv] = rnd_output[5]
             
@@ -967,7 +965,7 @@ if __name__ == '__main__':
             r = te.loada(ens_model[i])
             param = r.getGlobalParameterValues()
             newAnt = ng.generateAntfromST(list(fid_dict.values()), list(bid_dict.values()),
-                                          j, ens_rtype[i], ens_inhabactiv[i],
+                                          j, ens_rtypes[i], ens_inhabactiv[i],
                                           boundary_init=realBoundaryVal)
             # TODO: remove
             r = te.loada(newAnt)
