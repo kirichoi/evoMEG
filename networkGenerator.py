@@ -137,11 +137,11 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
         rTypes[1,r_idx] = regType
         rTypes[2,r_idx] = revType
     
-    posrct_count = np.count_nonzero(posrct, axis=1)[realFloatingIdsInd]
-    rctorder = np.argsort(posrct_count)
+    rct_r_order = np.argsort(np.count_nonzero(signs<=0, axis=0)[realFloatingIdsInd])
     
-    for i,s in enumerate(rctorder):
-        for j in r_order:
+    for i in range(len(realFloatingIdsInd)):
+        s = np.argsort(np.count_nonzero(posrct, axis=1)[realFloatingIdsInd])[i]
+        for j in rct_r_order:
             if (rTypes[0,j] == ReactionType.UNIUNI) or (rTypes[0,j] == ReactionType.UNIBI):
                 rc_o1 = np.sum(stoi < 0, axis=0) > 0
                 posrct[:,rc_o1] = False
@@ -154,11 +154,11 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
         posprd[s,rct_idx] = False
         allposprd[s,rct_idx] = False
     
-    posprd_count = np.count_nonzero(posprd, axis=1)[realFloatingIdsInd]
-    prdorder = np.argsort(posprd_count)
+    prd_r_order = np.argsort(np.count_nonzero(signs>=0, axis=0)[realFloatingIdsInd])
     
-    for i,s in enumerate(prdorder):
-        for j in r_order:
+    for i in range(len(realFloatingIdsInd)):
+        s = np.argsort(np.count_nonzero(posprd, axis=1)[realFloatingIdsInd])[i]
+        for j in prd_r_order:
             if (rTypes[0,j] == ReactionType.UNIUNI) or (rTypes[0,j] == ReactionType.UNIBI):
                 rc_o1 = np.sum(stoi > 0, axis=0) > 0
                 posprd[:,rc_o1] = False
