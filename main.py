@@ -27,7 +27,7 @@ class SettingsClass:
         # Load experimental input or preconfigured settings
         
         # Path to a custom model (default: None)
-        self.MODEL_INPUT = None#r'C:\Users\user\Desktop\models\17.xml'
+        self.MODEL_INPUT = r'C:\Users\user\Desktop\models\19.xml'
         # Path to experimental data - not implemented (default: None)
         self.DATA_INPUT = None
         # Path to preconfigured settings (default: None)
@@ -454,19 +454,22 @@ def initialize(Settings):
         
         while (sttsum != 0 or sttrank != realNumFloating or
                norct or noprd or alreadyexists):
-            st, stt, rTypes, ia = ng.generateST(signs, realFloatingIdsInd, 
-                                                realBoundaryIdsInd, ns, nr)
-            sttsum = np.sum(stt)
-            sttrank = np.linalg.matrix_rank(stt)
-            noprd = any(np.sum(stt>0, axis=1) == 0)
-            norct = any(np.sum(stt<0, axis=1) == 0)
-            alreadyexists = stt.tolist() in tracking
-        
-            numGen += 1
-            if int(numGen/1000) == (numGen/1000):
-                print("Number of init. model gen. iter. = {}".format(numGen))
-            if numGen > Settings.maxIter_init:
-                raise Exception("Failed to initialize. Population size may be too large.")
+            try:
+                st, stt, rTypes, ia = ng.generateST(signs, realFloatingIdsInd, 
+                                                    realBoundaryIdsInd, ns, nr)
+                sttsum = np.sum(stt)
+                sttrank = np.linalg.matrix_rank(stt)
+                noprd = any(np.sum(stt>0, axis=1) == 0)
+                norct = any(np.sum(stt<0, axis=1) == 0)
+                alreadyexists = stt.tolist() in tracking
+            
+                numGen += 1
+                if int(numGen/1000) == (numGen/1000):
+                    print("Number of init. model gen. iter. = {}".format(numGen))
+                if numGen > Settings.maxIter_init:
+                    raise Exception("Failed to initialize. Population size may be too large.")
+            except:
+                pass
         antStr = ng.generateAntfromST(realFloatingIds, realBoundaryIds, 
                                       st, rTypes, ia, boundary_init=realBoundaryVal)
         try:
