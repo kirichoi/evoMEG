@@ -27,7 +27,7 @@ class SettingsClass:
         # Load experimental input or preconfigured settings
         
         # Path to a custom model (default: None)
-        self.MODEL_INPUT = None#r'C:\Users\user\Desktop\models\20.xml'
+        self.MODEL_INPUT = None#r'C:\Users\user\Desktop\models\23.xml'
         # Path to experimental data - not implemented (default: None)
         self.DATA_INPUT = None
         # Path to preconfigured settings (default: None)
@@ -41,7 +41,7 @@ class SettingsClass:
             
         # 'FFL_m', 'Linear_m', 'Nested_m', 'Branched_m', 'Feedback_m', 'sigPath'
         # 'FFL_r', 'Linear_r', 'Nested_r', 'Branched_r', 'Feedback_r'
-        self.modelType = 'FFL_m'
+        self.modelType = 'Feedback_r'
         
         
         # General settings ====================================================
@@ -122,19 +122,19 @@ class SettingsClass:
         # Plotting settings ===================================================
         
         # Flag to visualize plot
-        self.SHOW_PLOT = True
+        self.SHOW_PLOT = False
         # Flag to save figures
-        self.SAVE_PLOT = True
+        self.SAVE_PLOT = False
         
         
         # Export settings =====================================================
             
         # Flag to collect all models in the ensemble
-        self.EXPORT_ALL_MODELS = True
+        self.EXPORT_ALL_MODELS = False
         # Flag to save collected models
-        self.EXPORT_OUTPUT = True
+        self.EXPORT_OUTPUT = False
         # Flag to save current settings
-        self.EXPORT_SETTINGS = True
+        self.EXPORT_SETTINGS = False
         # Path to save the output
         self.EXPORT_PATH = './outputs/newnewRanGenTest'
         # Overwrite the contents if the folder exists
@@ -144,7 +144,7 @@ class SettingsClass:
         
         
         # Flag to run the algorithm - temporary
-        self.RUN = False
+        self.RUN = True
 
 
 def customGetScaledConcentrationControlCoefficientMatrix(r):
@@ -260,6 +260,7 @@ def callbackF(X, convergence=0.):
     print("{}, {}".format(counts,countf))
     return False
 
+
 def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtypes, 
                                ens_ia, ens_concCC, minind, mutind):
     global countf
@@ -280,10 +281,8 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
     mut_ia = ens_ia[mutind]
     mut_concCC = ens_concCC[mutind]
     
-    signs = np.sign(realConcCC).astype(int)
-    
     for m in mut_range:
-        cFalse = (1 + np.sum(np.not_equal(signs, np.sign(mut_concCC[m])), axis=0))
+        cFalse = (1 + np.sum(np.not_equal(realSigns, np.sign(mut_concCC[m])), axis=0))
         tempdiff = cFalse*np.linalg.norm(realConcCC - mut_concCC[m], axis=0)
         minrndidx = np.random.choice(minind)
         
@@ -291,36 +290,47 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
         mutate_condition = True
         
         while mutate_condition:
-            r_idx = np.random.choice(np.arange(nr), p=np.divide(tempdiff, np.sum(tempdiff)))
+            sttsum = 1
+            sttrank = 0
+            noprd = True
+            norct = True
+            alreadyexists = True
+            dups = True
             
-            stoi = copy.deepcopy(mut_stoi[m])
-            stoi[:,r_idx] = np.zeros(ns)
-            rtypes = copy.deepcopy(mut_rtypes[m])
-            ia = copy.deepcopy(mut_ia[m])
+            try:
+                r_idx = np.random.choice(np.arange(nr), p=np.divide(tempdiff, np.sum(tempdiff)))
+                
+                stoi = copy.deepcopy(mut_stoi[m])
+                stoi[:,r_idx] = np.zeros(ns)
+                rtypes = copy.deepcopy(mut_rtypes[m])
+                ia = copy.deepcopy(mut_ia[m])
+                
+                if np.random.random() < Settings.recomb:
+                    stoi[:,r_idx] = ens_stoi[minrndidx][:,r_idx]
+                    rtypes[:,r_idx] = ens_rtypes[minrndidx][:,r_idx]
+                    ia[:,r_idx] = ens_ia[minrndidx][:,r_idx]
+                else:
+                    stoi, rTyper, iar  = ng.generateSingleST(stoi, r_idx, realSigns, 
+                                                             realFloatingIdsInd, 
+                                                             realBoundaryIdsInd, ns, nr)
+                    rtypes[0,r_idx] = rTyper
+                    ia[:,r_idx] = iar
+                    
+                stt = stoi[realFloatingIdsInd]
+                stt[stt > 1] = 1
+                stt[stt < -1] = -1
+                
+                sttsum = np.sum(stt)
+                sttrank = np.linalg.matrix_rank(stt)
+                noprd = any(np.sum(stt>0, axis=1) == 0)
+                norct = any(np.sum(stt<0, axis=1) == 0)
+                alreadyexists = stt.tolist() in tracking
+                dups = len(check_duplicate_reaction(stt)) > 0
+            except:
+                pass
             
-            if np.random.random() < Settings.recomb:
-                stoi[:,r_idx] = ens_stoi[minrndidx][:,r_idx]
-                rtypes[:,r_idx] = ens_rtypes[minrndidx][:,r_idx]
-                ia[:,r_idx] = ens_ia[minrndidx][:,r_idx]
-            else:
-                stoi, rTyper, iar  = ng.generateSingleST(stoi, r_idx, signs, 
-                                                         realFloatingIdsInd, 
-                                                         realBoundaryIdsInd, ns, nr)
-                rtypes[0,r_idx] = rTyper
-                ia[:,r_idx] = iar
-            
-            stt = stoi[realFloatingIdsInd]
-            stt[stt > 1] = 1
-            stt[stt < -1] = -1
-            
-            sttsum = np.sum(stt)
-            sttrank = np.linalg.matrix_rank(stt)
-            noprd = any(np.sum(stt>0, axis=1) == 0)
-            norct = any(np.sum(stt<0, axis=1) == 0)
-            alreadyexists = stt.tolist() in tracking
-            dups = len(check_duplicate_reaction(stt)) > 0
             o += 1
-            
+                
             if ((sttsum != 0 or sttrank != realNumFloating or
                    norct or noprd or alreadyexists or dups) and (o < Settings.maxIter_mut)):
                 mutate_condition = True
@@ -426,8 +436,6 @@ def initialize(Settings):
     tracking = []
     ens_concCC = np.empty(Settings.ens_size, dtype='object')
     
-    signs = np.sign(realConcCC).astype(int)
-    
     # Initial Random generation
     while (numGoodModels < Settings.ens_size):
         numGen = 0
@@ -441,7 +449,7 @@ def initialize(Settings):
         while (sttsum != 0 or sttrank != realNumFloating or
                norct or noprd or alreadyexists):
             try:
-                st, stt, rTypes, ia = ng.generateST(signs, realFloatingIdsInd, 
+                st, stt, rTypes, ia = ng.generateST(realSigns, realFloatingIdsInd, 
                                                     realBoundaryIdsInd, ns, nr)
                 sttsum = np.sum(stt)
                 sttrank = np.linalg.matrix_rank(stt)
@@ -537,8 +545,6 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtypes,
     rnd_ia = np.empty((rndSize, ns, nr), dtype=int)
     rnd_concCC = np.empty(rndSize, dtype='object')
     
-    signs = np.sign(realConcCC).astype(int)
-    
     for l in range(rndSize):
         d = 0
         # Ensure no redundant models
@@ -551,7 +557,7 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtypes,
         while (sttsum != 0 or sttrank != realNumFloating or
                norct or noprd or alreadyexists) and (d < Settings.maxIter_gen):
             try:
-                st, stt, rTypes, ia = ng.generateST(signs, realFloatingIdsInd, 
+                st, stt, rTypes, ia = ng.generateST(realSigns, realFloatingIdsInd, 
                                                     realBoundaryIdsInd, ns, nr)
                 sttsum = np.sum(stt)
                 sttrank = np.linalg.matrix_rank(stt)
@@ -721,6 +727,8 @@ if __name__ == '__main__':
     
     if realRR.conservedMoietyAnalysis:
         realConcCC = realConcCC[np.argsort(realRR.getFloatingSpeciesIds())]
+    
+    realSigns = np.sign(realConcCC).astype(int)
     
     # Species
     realNumFloating = realRR.getNumFloatingSpecies()
