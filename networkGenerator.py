@@ -166,11 +166,11 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
     bpn5 = np.sum(signs>0, axis=0) == len(realFloatingIdsInd)
     
     if any(brn5):
-        allposrct[realBoundaryIdsInd,brn5] = False
-        posrct[realBoundaryIdsInd,brn5] = False
+        allposrct[realBoundaryIdsInd,r_range[brn5][:,np.newaxis]] = False
+        posrct[realBoundaryIdsInd,r_range[brn5][:,np.newaxis]] = False
     if any(bpn5):
-        allposprd[realBoundaryIdsInd,bpn5] = False
-        posprd[realBoundaryIdsInd,bpn5] = False
+        allposprd[realBoundaryIdsInd,r_range[bpn5][:,np.newaxis]] = False
+        posprd[realBoundaryIdsInd,r_range[bpn5][:,np.newaxis]] = False
     
     for i, r_idx in enumerate(r_order):
         if rTypes[0,r_idx] == ReactionType.UNIUNI:
@@ -386,6 +386,7 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
 def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
     
     iar = np.zeros(ns, dtype=int)
+    r_range = np.arange(nr)
     
     posrct = np.ones((ns, nr), dtype=bool)
     posrct[realFloatingIdsInd] = signs<=0
@@ -437,9 +438,9 @@ def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd,
     bpn5 = np.sum(signs>0, axis=0) == len(realFloatingIdsInd)
     
     if any(brn5):
-        posrct[realBoundaryIdsInd,brn5] = False
+        posrct[realBoundaryIdsInd,r_range[brn5][:,np.newaxis]] = False
     if any(bpn5):
-        posprd[realBoundaryIdsInd,bpn5] = False
+        posprd[realBoundaryIdsInd,r_range[bpn5][:,np.newaxis]] = False
     
     if rTyper == ReactionType.UNIUNI:
         if rsum == 0:
