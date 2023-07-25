@@ -74,6 +74,10 @@ class REVP:
 
 
 def pickReactionType(RP):
+    """
+    Choose the type of a reaction
+    """
+
     rt1 = np.random.random()
     if rt1 < RP.UniUni:
         rType = ReactionType.UNIUNI
@@ -104,6 +108,9 @@ def pickReactionType(RP):
 
 
 def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
+    """
+    Randomly generate a model stoichiometry
+    """
     
     stoi = np.zeros((ns, nr), dtype=int)
     rTypes = np.empty((3, nr), dtype=int)
@@ -384,6 +391,9 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
 
 
 def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
+    """
+    Randomly generate a model stoichiometry for a single reaction
+    """
     
     iar = np.zeros(ns, dtype=int)
     r_range = np.arange(nr)
@@ -649,9 +659,11 @@ def generateRateLaw(rl, floatingIds, boundaryIds, rlt, Jind):
     return rateLaw, Klist
 
 
-def generateSimpleRateLawStoich(regTypes, revTypes, Jind, rct, prd, ia, 
-                                real):
-    
+def generateSimpleRateLawStoich(regTypes, revTypes, Jind, rct, prd, ia, real):
+    """
+    Build a rate law for a reaction
+    """
+        
     Klist = []
     
     T = ''
@@ -716,6 +728,10 @@ def generateSimpleRateLawStoich(regTypes, revTypes, Jind, rct, prd, ia,
 
 
 def generateAntfromST(realFloatingIds, realBoundaryIds, st, rType, ia, boundary_init=None):
+    """
+    Convert stoichiometry to antimony string
+    """
+    
     Klist = []
     
     real = np.array(realFloatingIds + realBoundaryIds)
@@ -806,6 +822,9 @@ def generateAntfromST(realFloatingIds, realBoundaryIds, st, rType, ia, boundary_
 
 
 def generateParameterBoundary(glgp):
+    """
+    Define parameter boundaries
+    """
     
     pBound = []
     
