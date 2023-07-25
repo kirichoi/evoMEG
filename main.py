@@ -27,11 +27,13 @@ class SettingsClass:
         # Load experimental input or preconfigured settings
         
         # Path to a custom model (default: None)
-        self.MODEL_INPUT = None#r'C:\Users\user\Desktop\models\23.xml'
+        self.MODEL_INPUT = None
         # Path to experimental data - not implemented (default: None)
         self.DATA_INPUT = None
         # Path to preconfigured settings (default: None)
         self.READ_SETTINGS = None
+        # Path to previous output (default: None)
+        self.CACHED_DIR = None
         
         
         # Test models =========================================================
@@ -41,7 +43,7 @@ class SettingsClass:
             
         # 'FFL_m', 'Linear_m', 'Nested_m', 'Branched_m', 'Feedback_m', 'sigPath'
         # 'FFL_r', 'Linear_r', 'Nested_r', 'Branched_r', 'Feedback_r'
-        self.modelType = 'Feedback_r'
+        self.modelType = 'FFL_m'
         
         
         # General settings ====================================================
@@ -63,7 +65,8 @@ class SettingsClass:
         self.recomb = 0.3
         # Set conserved moiety (default: False)
         self.conservedMoiety = False
-        
+        # When testing, check if the correst stoichiometry was recovered (default: True)
+        self.checkCorrectStoichiometry = True
         # TODO: screen for the same stoichiometry at the end
         
         
@@ -136,7 +139,7 @@ class SettingsClass:
         # Flag to save current settings
         self.EXPORT_SETTINGS = False
         # Path to save the output
-        self.EXPORT_PATH = './outputs/newnewRanGenTest'
+        self.EXPORT_PATH = './outputs/checkCorrStoi'
         # Overwrite the contents if the folder exists
         self.EXPORT_OVERWRITE = False
         # Create folders based on model names
@@ -298,7 +301,7 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
             dups = True
             
             try:
-                r_idx = np.random.choice(np.arange(nr), p=np.divide(tempdiff, np.sum(tempdiff)))
+                r_idx = np.random.choice(nrList, p=np.divide(tempdiff, np.sum(tempdiff)))
                 
                 stoi = copy.deepcopy(mut_stoi[m])
                 stoi[:,r_idx] = np.zeros(ns)
@@ -759,6 +762,9 @@ if __name__ == '__main__':
         realBoundaryVal = realRR.getBoundarySpeciesConcentrations()
         
     realBoundaryIdsInd = np.array(realBoundaryIdsIndList)
+    
+    # Stoichiometry
+    realStoi = realRR.getFullStoichiometryMatrix().astype(int)
 
     # Number of Species and Ranges
     ns = realNumBoundary + realNumFloating # Number of species
@@ -920,6 +926,12 @@ if __name__ == '__main__':
         print("Run time: {}".format(t2-t1))
         
 #%%
+        if Settings.checkCorrectStoichiometry and Settings.MODEL_INPUT == None:
+            if realStoi in ens_stoi[:,:realNumFloating,:]:
+                print('The algorithm recovered the original model')
+            else:
+                print('The original model is not in the population')
+
         # TODO: remove unnecessary boundary species
 
         if Settings.refine:
