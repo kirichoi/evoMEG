@@ -28,7 +28,7 @@ class SettingsClass:
         
         # Path to a custom model (default: None)
         self.MODEL_INPUT = None
-        # Path to experimental data - not implemented (default: None)
+        #TODO Path to experimental data - not implemented (default: None)
         self.DATA_INPUT = None
         # Path to preconfigured settings (default: None)
         self.READ_SETTINGS = None
@@ -67,8 +67,7 @@ class SettingsClass:
         self.conservedMoiety = False
         # When testing, check if the correst stoichiometry was recovered (default: True)
         self.checkCorrectStoichiometry = True
-        # TODO: screen for the same stoichiometry at the end
-        
+                
         
         # Termination criterion settings ======================================
         # Settings to control termination criterion
@@ -138,8 +137,10 @@ class SettingsClass:
         self.EXPORT_OUTPUT = False
         # Flag to save current settings
         self.EXPORT_SETTINGS = False
+        # Flag to save current settings
+        self.EXPORT_CACHE = False
         # Path to save the output
-        self.EXPORT_PATH = './outputs/checkCorrStoi'
+        self.EXPORT_PATH = './outputs/loadCache'
         # Overwrite the contents if the folder exists
         self.EXPORT_OVERWRITE = False
         # Create folders based on model names
@@ -147,7 +148,7 @@ class SettingsClass:
         
         
         # Flag to run the algorithm - temporary
-        self.RUN = True
+        self.RUN = False
 
 
 def customGetScaledConcentrationControlCoefficientMatrix(r):
@@ -660,12 +661,29 @@ def argparse(argv):
             Settings.READ_SETTINGS = arg
         elif opt in ("-m", "--model"):
             Settings.MODEL_INPUT = arg
+        elif opt in ("-c", "--cache"):
+            Settings.CACHED_DIR = arg
 
 
 if __name__ == '__main__':
 #%% Import Settings
     Settings = SettingsClass()
     argparse(sys.argv[1:])
+    
+    if Settings.MODEL_INPUT != None:
+        try:
+            Settings.MODEL_INPUT = os.path.abspath(Settings.MODEL_INPUT)
+        except:
+            raise Exception("Cannot find the given model")
+    
+    if Settings.DATA_INPUT != None:
+        try:
+            Settings.DATA_INPUT = os.path.abspath(Settings.DATA_INPUT)
+        except:
+            raise Exception("Cannot find the given data")
+    
+    if Settings.CACHED_DIR != None:
+        Settings.READ_SETTINGS = os.path.join(Settings.CACHED_DIR, 'settings.txt')
     
     if Settings.READ_SETTINGS != None:
         ioutils.readSettings(Settings)
@@ -742,7 +760,7 @@ if __name__ == '__main__':
         realFloatingIds.append('S{}'.format(i))
         realFloatingIdsIndList.append(i)
     fid_dict = dict(zip(realFloatingIds, np.sort(realRR.getFloatingSpeciesIds())))
-        
+    
     realFloatingIdsInd = np.array(realFloatingIdsIndList)
     
     realNumBoundary = realRR.getNumBoundarySpecies()
@@ -799,11 +817,15 @@ if __name__ == '__main__':
     if Settings.RUN:
         process = psutil.Process()
         
+        # TODO: bundle dist stats in a single 2D array
         # Initualize Lists
-        best_dist = []
-        avg_dist = []
-        med_dist = []
-        top_dist = []
+        if Settings.CACHED_DIR != None:
+            (best_dist, avg_dist, med_dist, top_dist) = ioutils.readStats(Settings)
+        else:
+            best_dist = []
+            avg_dist = []
+            med_dist = []
+            top_dist = []
         
         # Start measuring time...
         t1 = time.time()
@@ -812,7 +834,12 @@ if __name__ == '__main__':
         memory.append(process.memory_info().rss)
         
         # Initialize
-        (ens_dist, ens_model, ens_stoi, ens_rtypes, ens_ia, ens_concCC, tracking) = initialize(Settings)
+        if Settings.CACHED_DIR != None:
+            (ens_dist, ens_model, ens_stoi, ens_rtypes, ens_ia, ens_concCC, 
+             tracking) = ioutils.readCache(Settings)
+        else:
+            (ens_dist, ens_model, ens_stoi, ens_rtypes, ens_ia, ens_concCC, 
+             tracking) = initialize(Settings)
 
         memory.append(process.memory_info().rss)
         
@@ -927,7 +954,10 @@ if __name__ == '__main__':
         
 #%%
         if Settings.checkCorrectStoichiometry and Settings.MODEL_INPUT == None:
-            if realStoi in ens_stoi[:,:realNumFloating,:]:
+            ens_stt = copy.deepcopy(ens_stoi[:,realFloatingIdsInd])
+            ens_stt[ens_stt > 0] = 1
+            ens_stt[ens_stt < 0] = -1
+            if np.any(np.all(realStoi == ens_stt, axis=(1, 2))):
                 print('The algorithm recovered the original model')
             else:
                 print('The original model is not in the population')
@@ -991,18 +1021,23 @@ if __name__ == '__main__':
         model_top = ens_model[dist_top_ind]
         memory.append(process.memory_info().rss)
         
-        # TODO: check if original stoichiometry is recovered
-        
-        
         # Collect models
         kdeOutput = analysis.selectWithKernalDensity(dist_top)
         
         if Settings.EXPORT_ALL_MODELS:
             model_col = model_top
             dist_col = dist_top
+            stoi_col = ens_stoi[dist_top_ind]
+            rtypes_col = ens_rtypes[dist_top_ind]
+            ia_col = ens_ia[dist_top_ind]
+            concCC_col = ens_concCC[dist_top_ind]
         else:
             model_col = model_top[:kdeOutput[0]]
             dist_col = dist_top[:kdeOutput[0]]
+            stoi_col = ens_stoi[dist_top_ind][:kdeOutput[0]]
+            rtypes_col = ens_rtypes[dist_top_ind][:kdeOutput[0]]
+            ia_col = ens_ia[dist_top_ind][:kdeOutput[0]]
+            concCC_col = ens_concCC[dist_top_ind][:kdeOutput[0]]
             
 #%%
         # Settings.EXPORT_PATH = os.path.abspath(os.path.join(os.getcwd(), Settings.EXPORT_PATH))
@@ -1027,13 +1062,20 @@ if __name__ == '__main__':
                 pt.plotDistanceHistogramWithKDE(kdeOutput, dist_top)
                 
 #%%
-        if Settings.EXPORT_SETTINGS or Settings.EXPORT_OUTPUT:
-            if Settings.EXPORT_SETTINGS:
-                ioutils.exportSettings(Settings, path=Settings.EXPORT_PATH)
-            
-            if Settings.EXPORT_OUTPUT:
-                ioutils.exportOutputs(model_col, dist_col, [best_dist, avg_dist, med_dist, top_dist], 
-                                      Settings, t2-t1, tracking, n, path=Settings.EXPORT_PATH)
+        if Settings.EXPORT_SETTINGS:
+            ioutils.exportSettings(Settings, path=Settings.EXPORT_PATH)
+        
+        if Settings.EXPORT_OUTPUT:
+            ioutils.exportOutputs(dist_col, [best_dist, avg_dist, med_dist, top_dist], 
+                                  Settings, tracking, path=Settings.EXPORT_PATH)
+            ioutils.exportModels(model_col, path=Settings.EXPORT_PATH)
+            ioutils.exportReport(model_col, Settings, t2-t1, tracking, n, 
+                                 path=Settings.EXPORT_PATH)
+        
+        if Settings.EXPORT_CACHE:
+            ioutils.exportModelComponents(stoi_col, rtypes_col, ia_col,
+                                          path=Settings.EXPORT_PATH)
+            ioutils.exportControlCoefficients(concCC_col, path=Settings.EXPORT_PATH)
 
     
     # Restore config
