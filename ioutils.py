@@ -72,6 +72,7 @@ def validateSettings(Settings):
     assert(isinstance(Settings.MODEL_INPUT, str) or Settings.MODEL_INPUT == None), 'Invalid MODEL_INPUT'
     assert(isinstance(Settings.DATA_INPUT, str) or Settings.DATA_INPUT == None), 'Invalid DATA_INPUT'
     assert(isinstance(Settings.READ_SETTINGS, str) or Settings.READ_SETTINGS == None), 'Invalid READ_SETTINGS'
+    assert(isinstance(Settings.CACHED_DIR, str) or Settings.CACHED_DIR == None), 'Invalid CACHED_DIR'
     
     assert(isinstance(Settings.ens_size, int)), 'Invalid ens_size'
     assert(isinstance(Settings.pass_size, int)), 'Invalid pass_size'
@@ -80,6 +81,8 @@ def validateSettings(Settings):
     assert(isinstance(Settings.maxIter_gen, int)), 'Invalid maxIter_gen'
     assert(isinstance(Settings.maxIter_mut, int)), 'Invalid maxIter_mut'
     assert(isinstance(Settings.recomb, float) and Settings.recomb<=1), 'Invalid recomb'
+    assert(isinstance(Settings.conservedMoiety, bool)), 'Invalid conservedMoiety'
+    assert(isinstance(Settings.checkCorrectStoichiometry, bool)), 'Invalid checkCorrectStoichiometry'
     
     assert(isinstance(Settings.n_gen, int) or Settings.n_gen == None), 'Invalid n_gen'
     assert(isinstance(Settings.gen_static, int) or Settings.thres_avg == None), 'Invalid thres_avg'
@@ -122,7 +125,7 @@ def exportSettings(Settings, path=None):
         outputdir = path
     else:
         outputdir = os.path.join(os.getcwd(), 'output')
-    
+        
     outputtxt = open(os.path.join(outputdir, 'settings.txt'), 'w')
     if Settings.MODEL_INPUT != None:
         outputtxt.writelines('MODEL_INPUT: {}'.format(Settings.MODEL_INPUT) + '\n')
@@ -130,6 +133,8 @@ def exportSettings(Settings, path=None):
         outputtxt.writelines('modelType: {}'.format(Settings.modelType) + '\n')
     if Settings.DATA_INPUT != None:
         outputtxt.writelines('DATA_INPUT: {}'.format(Settings.DATA_INPUT) + '\n')
+    if Settings.CACHED_DIR != None:
+        outputtxt.writelines('CACHED_DIR: {}'.format(Settings.CACHED_DIR) + '\n')
     outputtxt.writelines('ens_size: {}'.format(Settings.ens_size) + '\n')
     outputtxt.writelines('pass_size: {}'.format(Settings.pass_size) + '\n')
     outputtxt.writelines('top_p: {}'.format(Settings.top_p) + '\n')
@@ -155,7 +160,7 @@ def exportSettings(Settings, path=None):
     outputtxt.close()
     
     
-def exportOutputs(models, dists, dist_list, Settings, time, tracking, n, path=None):
+def exportOutputs(dists, dist_list, Settings, tracking, path=None):
     """
     Export all outputs to a specified path
         
@@ -167,11 +172,6 @@ def exportOutputs(models, dists, dist_list, Settings, time, tracking, n, path=No
     else:
         outputdir = os.path.join(os.getcwd(), 'output')
         
-    if not os.path.exists(outputdir):
-        os.mkdir(outputdir)
-    if not os.path.exists(os.path.join(outputdir, 'models')):
-        os.mkdir(os.path.join(outputdir, 'models'))
-    
     df = pd.DataFrame(np.array(dists), columns=['distance'])
     df.to_csv(os.path.join(outputdir, 'dist_collected.txt'))
     
@@ -185,6 +185,59 @@ def exportOutputs(models, dists, dist_list, Settings, time, tracking, n, path=No
     tracking_arr = np.array(tracking)
     np.save(os.path.join(outputdir, 'tracking.npy'), tracking_arr, allow_pickle=True)
     
+
+def exportModels(models, path=None):
+    """
+    Export models to a specified path
+        
+    :param path: path to export the models
+    """
+    
+    if path:
+        outputdir = path
+    else:
+        outputdir = os.path.join(os.getcwd(), 'output')
+        
+    if not os.path.exists(outputdir):
+        os.mkdir(outputdir)
+    if not os.path.exists(os.path.join(outputdir, 'models')):
+        os.mkdir(os.path.join(outputdir, 'models'))
+        
+    for i in range(len(models)):
+        modeltxt = open(os.path.join(outputdir, 'models/model_%03d' % i + '.txt'), 'w')
+        modeltxt.write(models[i])
+        modeltxt.close()
+    
+    
+def exportModelComponents(stoi, rtypes, ia, path=None):
+    """
+    Export model components to a specified path
+        
+    :param path: path to export the model components
+    """
+    
+    if path:
+        outputdir = path
+    else:
+        outputdir = os.path.join(os.getcwd(), 'output')
+        
+    np.save(os.path.join(outputdir, 'stoi.npy'), stoi, allow_pickle=True)
+    np.save(os.path.join(outputdir, 'rtypes.npy'), rtypes, allow_pickle=True)
+    np.save(os.path.join(outputdir, 'ia.npy'), ia, allow_pickle=True)
+    
+    
+def exportReport(models, Settings, time, tracking, n, path=None):
+    """
+    Export the report file to a specified path
+        
+    :param path: path to export the report file
+    """
+    
+    if path:
+        outputdir = path
+    else:
+        outputdir = os.path.join(os.getcwd(), 'output')
+    
     outputtxt = open(os.path.join(outputdir, 'report.txt'), 'w')
     outputtxt.writelines('------------------------- REPORT -------------------------\n')
     outputtxt.writelines('RUN COMPLETE. HERE ARE SOME METRIC YOU MIGHT BE INTERESTED\n')
@@ -194,11 +247,21 @@ def exportOutputs(models, dists, dist_list, Settings, time, tracking, n, path=No
     outputtxt.writelines('Run Time: {:.2f}'.format(time) + ' s\n')
     outputtxt.writelines('No. Stoich. Analyzed: {}'.format(len(tracking)) + '\n')
     outputtxt.close()
+
+
+def exportControlCoefficients(concCC, path=None):
+    """
+    Export model components to a specified path
+        
+    :param path: path to export the model components
+    """
     
-    for i in range(len(models)):
-        modeltxt = open(os.path.join(outputdir, 'models/model_%03d' % i + '.txt'), 'w')
-        modeltxt.write(models[i])
-        modeltxt.close()
+    if path:
+        outputdir = path
+    else:
+        outputdir = os.path.join(os.getcwd(), 'output')
+        
+    np.save(os.path.join(outputdir, 'concCC.npy'), concCC, allow_pickle=True)
     
 
 def readSettings(Settings):
@@ -269,6 +332,48 @@ def readData(dataPath):
         return df
     else:
         raise Exception("Cannot find the file at the specified path")
+
+
+def readCache(Settings):
+    """
+    Read cached output.
+    
+    :param dataPath: path to the cached output directory
+    """
+    ens_dist = pd.read_csv(os.path.join(Settings.CACHED_DIR, 'dist_collected.txt'), index_col=0)
+    ens_dist = ens_dist.to_numpy().flatten()
+    
+    ens_model = np.empty(Settings.ens_size, dtype='object')
+    for i in range(Settings.ens_size):
+        modeltxt = open(os.path.join(Settings.CACHED_DIR, 'models/model_%03d' % i + '.txt'), 'r')
+        ens_model[i] = modeltxt.read()
+        modeltxt.close()
+    
+    ens_stoi = np.load(os.path.join(Settings.CACHED_DIR, 'stoi.npy'))
+    ens_rtypes = np.load(os.path.join(Settings.CACHED_DIR, 'rtypes.npy'))
+    ens_ia = np.load(os.path.join(Settings.CACHED_DIR, 'ia.npy'))
+    
+    ens_concCC = np.load(os.path.join(Settings.CACHED_DIR, 'concCC.npy'))
+    
+    tracking = np.load(os.path.join(Settings.CACHED_DIR, 'tracking.npy'))
+    
+    return (ens_dist, ens_model, ens_stoi, ens_rtypes, ens_ia, ens_concCC, tracking)
+    
+    
+def readStats(Settings):
+    """
+    Read cached output.
+    
+    :param dataPath: path to the cached output directory
+    """
+    stats = pd.read_csv(os.path.join(Settings.CACHED_DIR, 'dist_stat.txt'), index_col=0)
+    
+    best_dist = stats['generation best'].tolist()[:-1]
+    avg_dist = stats['generation average'].tolist()[:-1]
+    med_dist = stats['generation median'].tolist()[:-1]
+    top_dist = stats['generation top {}'.format(int(Settings.top_p*100))].tolist()[:-1]
+    
+    return (best_dist, avg_dist, med_dist, top_dist)
     
     
 def testModels(modelType):
