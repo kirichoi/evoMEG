@@ -85,7 +85,7 @@ def validateSettings(Settings):
     assert(isinstance(Settings.checkCorrectStoichiometry, bool)), 'Invalid checkCorrectStoichiometry'
     
     assert(isinstance(Settings.n_gen, int) or Settings.n_gen == None), 'Invalid n_gen'
-    assert(isinstance(Settings.gen_static, int) or Settings.thres_avg == None), 'Invalid thres_avg'
+    assert(isinstance(Settings.gen_static, int) or Settings.gen_static == None), 'Invalid gen_static'
     assert(isinstance(Settings.thres_avg, (int, float)) or Settings.thres_avg == None), 'Invalid thres_avg'
     assert(isinstance(Settings.thres_median, (int, float)) or Settings.thres_median == None), 'Invalid thres_median'
     assert(isinstance(Settings.thres_shortest, (int, float)) or Settings.thres_shortest == None), 'Invalid thres_shortest'
@@ -107,7 +107,9 @@ def validateSettings(Settings):
     assert(isinstance(Settings.SHOW_PLOT, bool)), 'Invalid SHOW_PLOT'
     assert(isinstance(Settings.SAVE_PLOT, bool)), 'Invalid SAVE_PLOT'
     assert(isinstance(Settings.EXPORT_ALL_MODELS, bool)), 'Invalid EXPORT_ALL_MODELS'
+    assert(isinstance(Settings.EXPORT_OUTPUT, bool)), 'Invalid EXPORT_OUTPUT'
     assert(isinstance(Settings.EXPORT_SETTINGS, bool)), 'Invalid EXPORT_SETTINGS'
+    assert(isinstance(Settings.EXPORT_CACHE, bool)), 'Invalid EXPORT_CACHE'
     assert(isinstance(Settings.EXPORT_PATH, str) or Settings.EXPORT_PATH == None), 'Invalid EXPORT_PATH'
     assert(isinstance(Settings.EXPORT_OVERWRITE, bool)), 'Invalid EXPORT_OVERWRITE'
     assert(isinstance(Settings.EXPORT_FORCE_MODELNAMES, bool)), 'Invalid EXPORT_FORCE_MODELNAMES'
@@ -138,16 +140,16 @@ def exportSettings(Settings, path=None):
     outputtxt.writelines('ens_size: {}'.format(Settings.ens_size) + '\n')
     outputtxt.writelines('pass_size: {}'.format(Settings.pass_size) + '\n')
     outputtxt.writelines('top_p: {}'.format(Settings.top_p) + '\n')
+    outputtxt.writelines('maxIter_init: {}'.format(Settings.maxIter_init) + '\n')
+    outputtxt.writelines('maxIter_gen: {}'.format(Settings.maxIter_gen) + '\n')
+    outputtxt.writelines('maxIter_mut: {}'.format(Settings.maxIter_mut) + '\n')
+    outputtxt.writelines('recomb: {}'.format(Settings.recomb) + '\n')
     outputtxt.writelines('n_gen: {}'.format(Settings.n_gen) + '\n')
     outputtxt.writelines('gen_static: {}'.format(Settings.gen_static) + '\n')
     outputtxt.writelines('thres_avg: {}'.format(Settings.thres_avg) + '\n')
     outputtxt.writelines('thres_median: {}'.format(Settings.thres_median) + '\n')
     outputtxt.writelines('thres_shortest: {}'.format(Settings.thres_shortest) + '\n')
     outputtxt.writelines('thres_top: {}'.format(Settings.thres_top) + '\n')
-    outputtxt.writelines('maxIter_init: {}'.format(Settings.maxIter_init) + '\n')
-    outputtxt.writelines('maxIter_gen: {}'.format(Settings.maxIter_gen) + '\n')
-    outputtxt.writelines('maxIter_mut: {}'.format(Settings.maxIter_mut) + '\n')
-    outputtxt.writelines('recomb: {}'.format(Settings.recomb) + '\n')
     outputtxt.writelines('optiMaxIter: {}'.format(Settings.optiMaxIter) + '\n')
     outputtxt.writelines('optiTol: {}'.format(Settings.optiTol) + '\n')
     outputtxt.writelines('optiPolish: {}'.format(Settings.optiPolish) + '\n')
