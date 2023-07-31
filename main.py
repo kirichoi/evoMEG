@@ -32,7 +32,7 @@ class SettingsClass:
         self.DATA_INPUT = None
         # Path to preconfigured settings (default: None)
         self.READ_SETTINGS = None
-        # Path to previous output (default: None)
+        # Path to a previous output (default: None)
         self.CACHED_DIR = None
         
         
@@ -137,7 +137,7 @@ class SettingsClass:
         self.EXPORT_OUTPUT = False
         # Flag to save current settings
         self.EXPORT_SETTINGS = False
-        # Flag to save current settings
+        # Flag to save model components for caching
         self.EXPORT_CACHE = False
         # Path to save the output
         self.EXPORT_PATH = './outputs/loadCache'
