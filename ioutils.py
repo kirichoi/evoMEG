@@ -90,6 +90,7 @@ def validateSettings(Settings):
     assert(isinstance(Settings.thres_median, (int, float)) or Settings.thres_median == None), 'Invalid thres_median'
     assert(isinstance(Settings.thres_shortest, (int, float)) or Settings.thres_shortest == None), 'Invalid thres_shortest'
     assert(isinstance(Settings.thres_top, (int, float)) or Settings.thres_top == None), 'Invalid thres_top'
+    assert(isinstance(Settings.max_run_time, (int, float)) or Settings.max_run_time == None), 'Invalid max_run_time'
     assert([Settings.n_gen, Settings.gen_static, Settings.thres_avg, Settings.thres_median,
             Settings.thres_shortest, Settings.thres_top] != [None, None, None, None, None, None]), 'No termination condition given'
     
@@ -150,6 +151,7 @@ def exportSettings(Settings, path=None):
     outputtxt.writelines('thres_median: {}'.format(Settings.thres_median) + '\n')
     outputtxt.writelines('thres_shortest: {}'.format(Settings.thres_shortest) + '\n')
     outputtxt.writelines('thres_top: {}'.format(Settings.thres_top) + '\n')
+    outputtxt.writelines('max_run_time: {}'.format(Settings.max_run_time) + '\n')
     outputtxt.writelines('optiMaxIter: {}'.format(Settings.optiMaxIter) + '\n')
     outputtxt.writelines('optiTol: {}'.format(Settings.optiTol) + '\n')
     outputtxt.writelines('optiPolish: {}'.format(Settings.optiPolish) + '\n')

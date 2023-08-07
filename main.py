@@ -84,6 +84,8 @@ class SettingsClass:
         self.thres_shortest = None
         # Threshold top p-percent smallest distance
         self.thres_top = None
+        # Maximum run time allowed in minutes
+        self.max_run_time = 3
         
         
         # Optimizer settings ==================================================
@@ -238,7 +240,7 @@ def f1(k_list, *args):
     return dist_obj
 
 
-def updateTC(n, dists, Settings):
+def updateTC(n, runtime, dists, Settings):
     terminate = False
     
     if (Settings.n_gen != None) and (n >= Settings.n_gen):
@@ -253,6 +255,8 @@ def updateTC(n, dists, Settings):
     if (Settings.thres_shortest != None) and (dists[0][-1] <= Settings.thres_shortest):
         terminate = True
     if (Settings.thres_top != None) and (dists[3][-1] <= Settings.thres_top):
+        terminate = True
+    if (Settings.max_run_time != None) and (runtime/60 >= Settings.max_run_time):
         terminate = True
     
     return terminate
@@ -925,7 +929,8 @@ if __name__ == '__main__':
             print("Average distance: {}".format(avg_dist[-1]))
             
             n += 1
-            terminate = updateTC(n, [best_dist, avg_dist, med_dist, top_dist], 
+            runtime = time.time()-t1
+            terminate = updateTC(n, runtime, [best_dist, avg_dist, med_dist, top_dist], 
                                  Settings)
             
             # for tt in range(len(mut_ind_inv)):
@@ -945,9 +950,8 @@ if __name__ == '__main__':
             # if np.average(dist_top) > 10000:
             #     break
     
-        # Check the run time
-        t2 = time.time()
-        print("Run time: {}".format(t2-t1))
+        # Print the run time
+        print("Run time: {}".format(runtime))
         
 #%%
         if Settings.checkCorrectStoichiometry and Settings.MODEL_INPUT == None:
@@ -1039,8 +1043,6 @@ if __name__ == '__main__':
 #%%
         Settings.EXPORT_PATH = ioutils.exportPathHandler(Settings)
 
-        # Settings.EXPORT_PATH = os.path.abspath(os.path.join(os.getcwd(), Settings.EXPORT_PATH))
-        
         if Settings.SAVE_PLOT:
             if not os.path.exists(Settings.EXPORT_PATH):
                 os.mkdir(Settings.EXPORT_PATH)
@@ -1068,7 +1070,7 @@ if __name__ == '__main__':
             ioutils.exportOutputs(dist_col, [best_dist, avg_dist, med_dist, top_dist], 
                                   Settings, tracking, path=Settings.EXPORT_PATH)
             ioutils.exportModels(model_col, path=Settings.EXPORT_PATH)
-            ioutils.exportReport(model_col, Settings, t2-t1, tracking, len(top_dist), 
+            ioutils.exportReport(model_col, Settings, runtime, tracking, len(top_dist), 
                                  path=Settings.EXPORT_PATH)
         
         if Settings.EXPORT_CACHE:
