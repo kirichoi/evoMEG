@@ -351,13 +351,13 @@ def readCache(Settings):
         ens_model[i] = modeltxt.read()
         modeltxt.close()
     
-    ens_stoi = np.load(os.path.join(Settings.CACHED_DIR, 'stoi.npy'))
-    ens_rtypes = np.load(os.path.join(Settings.CACHED_DIR, 'rtypes.npy'))
-    ens_ia = np.load(os.path.join(Settings.CACHED_DIR, 'ia.npy'))
+    ens_stoi = np.load(os.path.join(Settings.CACHED_DIR, 'stoi.npy'), allow_pickle=True)
+    ens_rtypes = np.load(os.path.join(Settings.CACHED_DIR, 'rtypes.npy'), allow_pickle=True)
+    ens_ia = np.load(os.path.join(Settings.CACHED_DIR, 'ia.npy'), allow_pickle=True)
     
-    ens_concCC = np.load(os.path.join(Settings.CACHED_DIR, 'concCC.npy'))
+    ens_concCC = np.load(os.path.join(Settings.CACHED_DIR, 'concCC.npy'), allow_pickle=True)
     
-    tracking = np.load(os.path.join(Settings.CACHED_DIR, 'tracking.npy'))
+    tracking = np.load(os.path.join(Settings.CACHED_DIR, 'tracking.npy'), allow_pickle=True).tolist()
     
     return (ens_dist, ens_model, ens_stoi, ens_rtypes, ens_ia, ens_concCC, tracking)
     
@@ -368,12 +368,18 @@ def readStats(Settings):
     
     :param dataPath: path to the cached output directory
     """
-    stats = pd.read_csv(os.path.join(Settings.CACHED_DIR, 'dist_stat.txt'), index_col=0)
-    
-    best_dist = stats['generation best'].tolist()[:-1]
-    avg_dist = stats['generation average'].tolist()[:-1]
-    med_dist = stats['generation median'].tolist()[:-1]
-    top_dist = stats['generation top {}'.format(int(Settings.top_p*100))].tolist()[:-1]
+    try:
+        stats = pd.read_csv(os.path.join(Settings.CACHED_DIR, 'dist_stat.txt'), index_col=0)
+        
+        best_dist = stats['generation best'].tolist()[:-1]
+        avg_dist = stats['generation average'].tolist()[:-1]
+        med_dist = stats['generation median'].tolist()[:-1]
+        top_dist = stats['generation top {}'.format(int(Settings.top_p*100))].tolist()[:-1]
+    except:
+        best_dist = []
+        avg_dist = []
+        med_dist = []
+        top_dist = []
     
     return (best_dist, avg_dist, med_dist, top_dist)
     
