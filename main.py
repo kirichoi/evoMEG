@@ -124,21 +124,21 @@ class SettingsClass:
         # Plotting settings ===================================================
         
         # Flag to visualize plot
-        self.SHOW_PLOT = False
+        self.SHOW_PLOT = True
         # Flag to save figures
-        self.SAVE_PLOT = False
+        self.SAVE_PLOT = True
         
         
         # Export settings =====================================================
             
         # Flag to collect all models in the ensemble
-        self.EXPORT_ALL_MODELS = False
+        self.EXPORT_ALL_MODELS = True
         # Flag to save collected models
-        self.EXPORT_OUTPUT = False
+        self.EXPORT_OUTPUT = True
         # Flag to save current settings
-        self.EXPORT_SETTINGS = False
+        self.EXPORT_SETTINGS = True
         # Flag to save model components for caching
-        self.EXPORT_CACHE = False
+        self.EXPORT_CACHE = True
         # Path to save the output
         self.EXPORT_PATH = './outputs/loadCache'
         # Overwrite the contents if the folder exists
@@ -148,7 +148,7 @@ class SettingsClass:
         
         
         # Flag to run the algorithm - temporary
-        self.RUN = False
+        self.RUN = True
 
 
 def customGetScaledConcentrationControlCoefficientMatrix(r):
@@ -690,9 +690,6 @@ if __name__ == '__main__':
     
     ioutils.validateSettings(Settings)
     
-    if Settings.RUN:
-        Settings.EXPORT_PATH = ioutils.exportPathHandler(Settings)
-    
 #%% Analyze True Model
     roadrunner.Logger.disableLogging()
     # roadrunner.Config.setValue(roadrunner.Config.ROADRUNNER_DISABLE_WARNINGS, 3)
@@ -1040,6 +1037,8 @@ if __name__ == '__main__':
             concCC_col = ens_concCC[dist_top_ind][:kdeOutput[0]]
             
 #%%
+        Settings.EXPORT_PATH = ioutils.exportPathHandler(Settings)
+
         # Settings.EXPORT_PATH = os.path.abspath(os.path.join(os.getcwd(), Settings.EXPORT_PATH))
         
         if Settings.SAVE_PLOT:
@@ -1069,7 +1068,7 @@ if __name__ == '__main__':
             ioutils.exportOutputs(dist_col, [best_dist, avg_dist, med_dist, top_dist], 
                                   Settings, tracking, path=Settings.EXPORT_PATH)
             ioutils.exportModels(model_col, path=Settings.EXPORT_PATH)
-            ioutils.exportReport(model_col, Settings, t2-t1, tracking, n, 
+            ioutils.exportReport(model_col, Settings, t2-t1, tracking, len(top_dist), 
                                  path=Settings.EXPORT_PATH)
         
         if Settings.EXPORT_CACHE:
