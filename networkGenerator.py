@@ -727,7 +727,7 @@ def generateSimpleRateLawStoich(regTypes, revTypes, Jind, rct, prd, ia, real):
     return rateLaw, Klist
 
 
-def generateAntfromST(realFloatingIds, realBoundaryIds, st, rType, ia, boundary_init=None):
+def generateAntimonyfromST(realFloatingIds, realBoundaryIds, st, rType, ia, boundary_init=None):
     """
     Convert stoichiometry to antimony string
     """
@@ -867,7 +867,7 @@ def generateLinearChainAnt(ns):
 
 
 # TODO: generate reaction list from aliases
-def generateReactionListFromAntimony(antStr):
+def generateSTfromAntimony(antStr, realids=None):
     """
     Generate reaction list from a model encoded in Antimony
     
@@ -880,9 +880,16 @@ def generateReactionListFromAntimony(antStr):
     
     numBnd = r.getNumBoundarySpecies()
     numFlt = r.getNumFloatingSpecies()
-    boundaryId = r.getBoundarySpeciesIds()
-    floatingId = r.getFloatingSpeciesIds()
     nr = r.getNumReactions()
+    ns = numFlt + numBnd
+    
+    floatingId = np.sort(r.getFloatingSpeciesIds())
+    boundaryId = np.sort(r.getBoundarySpeciesIds())
+    fbId = np.concatenate((floatingId, boundaryId))
+    
+    stoi = np.zeros((ns, nr), dtype=int)
+    rtypes = np.zeros((3, nr), dtype=int)
+    ia = np.zeros((ns, nr), dtype=int)
     
     # prepare symbols for sympy
     boundaryId_sympy = [] 
@@ -972,14 +979,8 @@ def generateReactionListFromAntimony(antStr):
         else:
             r_type.append('irreversible')
         
-    reactionList = []
     
     for i in range(nr):
-        inhib = []
-        activ = []
-        rct_temp = []
-        prd_temp = []
-        
         if len(rct[i]) == 1:
             if len(prd[i]) == 1:
                 rType = 0
@@ -992,22 +993,35 @@ def generateReactionListFromAntimony(antStr):
                 rType = 3
         
         for j in range(len(rct[i])):
-            rct_temp.append(int(rct[i][j][1:]))
+            if realids != None:
+                z = np.where(rct[i][j] == fbId)[0][0]
+                r_idx = int(realids[z][1:])
+            else:
+                r_idx = int(rct[i][j][1:])
+            stoi[r_idx][i] -= 1
             
         for j in range(len(prd[i])):
-            prd_temp.append(int(prd[i][j][1:]))
+            if realids != None:
+                z = np.where(prd[i][j] == fbId)[0][0]
+                p_idx = int(realids[z][1:])
+            else:
+                p_idx = int(prd[i][j][1:])
+            stoi[p_idx][i] += 1
         
         if len(mod_type[i]) == 0:
             regType = 0
+            ia[:,i] = 0
         else:
             for k in range(len(mod_type[i])):
                 if mod_type[i][k] == 'inhibitor':
-                    inhib.append(int(mod[i][k][1:]))
+                    i_idx = int(mod[i][k][1:])
+                    ia[i_idx][i] -= 1
                 elif mod_type[i][k] == 'activator':
-                    activ.append(int(mod[i][k][1:]))
+                    a_idx = int(mod[i][k][1:])
+                    ia[a_idx][i] += 1
                 
-                if len(inhib) > 0:
-                    if len(activ) == 0:
+                if np.sum(ia[:,i] < 0) > 0:
+                    if np.sum(ia[:,i] > 0) == 0:
                         regType = 1
                     else:
                         regType = 3
@@ -1018,9 +1032,12 @@ def generateReactionListFromAntimony(antStr):
             revType = 1
         else:
             revType = 0
-
-        reactionList.append([rType, regType, revType, rct_temp, prd_temp, activ,
-                             inhib])
     
-    return reactionList
+        rtypes[:,i] = [rType, regType, revType]
+    
+    rStoi = stoi[np.arange(numFlt)]
+    rStoi[rStoi > 0] = 1
+    rStoi[rStoi < 0] = -1
+    
+    return (stoi, rStoi, rtypes, ia)
 

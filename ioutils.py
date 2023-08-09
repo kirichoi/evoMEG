@@ -9,6 +9,7 @@ import os, shutil
 import warnings
 import numpy as np
 import pandas as pd
+import analysis
 
 
 def exportPathHandler(Settings):
@@ -275,33 +276,36 @@ def readSettings(Settings):
     :param Settings: Settings class
     """
     
-    f = open(Settings.READ_SETTINGS, "r")
-    ls = f.read().splitlines()
-    f.close()
-    
-    for s in ls:
-        sp = s.split(': ')
-        try:
-            if sp[1].replace('.','',1).isdigit():
-                if sp[1].isdigit():
-                    Settings.__setattr__(sp[0], int(sp[1]))
+    if os.path.isfile(Settings.READ_SETTINGS):
+        f = open(Settings.READ_SETTINGS, "r")
+        ls = f.read().splitlines()
+        f.close()
+        
+        for s in ls:
+            sp = s.split(': ')
+            try:
+                if sp[1].replace('.','',1).isdigit():
+                    if sp[1].isdigit():
+                        Settings.__setattr__(sp[0], int(sp[1]))
+                    else:
+                        Settings.__setattr__(sp[0], float(sp[1]))
+                elif sp[1] == 'True':
+                    Settings.__setattr__(sp[0], True)
+                elif sp[1] == 'False':
+                    Settings.__setattr__(sp[0], False)
+                elif sp[1] == 'None':
+                    Settings.__setattr__(sp[0], None)
                 else:
-                    Settings.__setattr__(sp[0], float(sp[1]))
-            elif sp[1] == 'True':
-                Settings.__setattr__(sp[0], True)
-            elif sp[1] == 'False':
-                Settings.__setattr__(sp[0], False)
-            elif sp[1] == 'None':
-                Settings.__setattr__(sp[0], None)
-            else:
-                if isinstance(sp[1], str):
-                    s = sp[1].strip("'")
-                    s = s.strip('"')
-                    Settings.__setattr__(sp[0], s)
-                else:
-                    Settings.__setattr__(sp[0], sp[1])
-        except:
-            warnings.warn("Setting {} is not valid and was ignored".format(s))
+                    if isinstance(sp[1], str):
+                        s = sp[1].strip("'")
+                        s = s.strip('"')
+                        Settings.__setattr__(sp[0], s)
+                    else:
+                        Settings.__setattr__(sp[0], sp[1])
+            except:
+                warnings.warn("Setting {} is not valid and was ignored".format(s))
+    else:
+        raise warnings.warn("Cannot read the settings file")
     
 
 def readModels(modelsPath):
@@ -344,24 +348,41 @@ def readCache(Settings):
     
     :param dataPath: path to the cached output directory
     """
-    ens_dist = pd.read_csv(os.path.join(Settings.CACHED_DIR, 'dist_collected.txt'), index_col=0)
-    ens_dist = ens_dist.to_numpy().flatten()
     
-    ens_model = np.empty(Settings.ens_size, dtype='object')
-    for i in range(Settings.ens_size):
-        modeltxt = open(os.path.join(Settings.CACHED_DIR, 'models/model_%03d' % i + '.txt'), 'r')
-        ens_model[i] = modeltxt.read()
-        modeltxt.close()
+    try:
+        ens_model = np.empty(Settings.ens_size, dtype='object')
+        for i in range(Settings.ens_size):
+            modeltxt = open(os.path.join(Settings.CACHED_DIR, 'models/model_%03d' % i + '.txt'), 'r')
+            ens_model[i] = modeltxt.read()
+            modeltxt.close()
+    except:
+        raise Exception("Cannot read models")
     
-    ens_stoi = np.load(os.path.join(Settings.CACHED_DIR, 'stoi.npy'), allow_pickle=True)
-    ens_rtypes = np.load(os.path.join(Settings.CACHED_DIR, 'rtypes.npy'), allow_pickle=True)
-    ens_ia = np.load(os.path.join(Settings.CACHED_DIR, 'ia.npy'), allow_pickle=True)
+    dist_path = os.path.join(Settings.CACHED_DIR, 'dist_collected.txt')
+    concCC_path = os.path.join(Settings.CACHED_DIR, 'concCC.npy')
+    if os.path.isfile(dist_path) and os.path.isfile(concCC_path):
+        ens_dist = pd.read_csv(dist_path, index_col=0)
+        ens_dist = ens_dist.to_numpy().flatten()
+        ens_concCC = np.load(concCC_path, allow_pickle=True)
+    else:
+        ens_dist, ens_concCC = analysis.cacheFallBack1(Settings, ens_model)
     
-    ens_concCC = np.load(os.path.join(Settings.CACHED_DIR, 'concCC.npy'), allow_pickle=True)
+    stoi_path = os.path.join(Settings.CACHED_DIR, 'stoi.npy')
+    rtypes_path = os.path.join(Settings.CACHED_DIR, 'rtypes.npy')
+    ia_path = os.path.join(Settings.CACHED_DIR, 'ia.npy')
+    tracking_path = os.path.join(Settings.CACHED_DIR, 'tracking.npy')
     
-    tracking = np.load(os.path.join(Settings.CACHED_DIR, 'tracking.npy'), allow_pickle=True).tolist()
+    if (os.path.isfile(stoi_path) and os.path.isfile(rtypes_path) and 
+        os.path.isfile(ia_path) and os.path.isfile(tracking_path)):
+        ens_stoi = np.load(stoi_path, allow_pickle=True)
+        ens_rtypes = np.load(rtypes_path, allow_pickle=True)
+        ens_ia = np.load(ia_path, allow_pickle=True)
+        tracking = np.load(tracking_path, allow_pickle=True).tolist()
+    else:
+        (ens_stoi, ens_rtypes, ens_ia, tracking) = analysis.cacheFallBack2(Settings, ens_model)
     
     return (ens_dist, ens_model, ens_stoi, ens_rtypes, ens_ia, ens_concCC, tracking)
+    
     
     
 def readStats(Settings):
@@ -378,6 +399,7 @@ def readStats(Settings):
         med_dist = stats['generation median'].tolist()[:-1]
         top_dist = stats['generation top {}'.format(int(Settings.top_p*100))].tolist()[:-1]
     except:
+        warnings.warn("Cannot read the fitness statistics")
         best_dist = []
         avg_dist = []
         med_dist = []

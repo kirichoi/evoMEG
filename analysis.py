@@ -5,14 +5,86 @@ CCR analysis extension module
 Kiri Choi (c) 2018
 """
 
-import tellurium as te
 import numpy as np
+import tellurium as te
+import networkGenerator as ng
 
 
 def getWeights(dist):
     """
     """
 
+def customGetScaledConcentrationControlCoefficientMatrix(r):
+    """
+    Numpy implementation of GetScaledConcentrationControlCoefficientMatrix()
+    that does not force run steadyState()
+    
+    Parameters
+    ----------
+    r : roadrunner.RoadRunner()
+        roadrunner instance.
+
+    Returns
+    -------
+    T5 : numpy.ndarray
+        Scaled concentration control coefficient matrix.
+    """
+    
+    re = r.simulate(0, 10000, 5)
+    # r.steadyState()
+    uelast = r.getUnscaledElasticityMatrix()
+    Nr = r.getNrMatrix()
+    T1 = np.dot(Nr, uelast)
+    LinkMatrix = r.getLinkMatrix()
+    Jac = np.dot(T1, LinkMatrix)
+    T2 = np.negative(Jac)
+    Inv = np.linalg.inv(T2)
+    T3 = np.dot(Inv, Nr)
+    T4 = np.dot(LinkMatrix, T3)
+
+    a = np.tile(r.getReactionRates(), (np.shape(T4)[0], 1))
+    b = np.tile(r.getFloatingSpeciesConcentrations(), (np.shape(T4)[1], 1)).T
+    
+    T5 = np.multiply(T4, np.divide(a, b))
+    
+    return T5
+
+
+def cacheFallBack1(Settings, ens_model):
+    
+    ens_dist = np.empty(Settings.ens_size)
+    ens_concCC = np.empty(Settings.ens_size, dtype='object')
+    
+    for i in range(len(ens_model)):
+        r = te.loada(ens_model[i])
+        concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
+        
+        dist_obj = ((np.linalg.norm(Settings.realConcCC - concCC))*
+                    (1 + np.sum(np.not_equal(np.sign(Settings.realConcCC), np.sign(concCC)))))
+        ens_dist[i] = dist_obj
+        ens_concCC[i] = concCC
+        
+    
+    return (ens_dist, ens_concCC)
+
+
+def cacheFallBack2(Settings, ens_model, ns, nr):
+    
+    ens_stoi = np.empty((Settings.ens_size, ns, nr), dtype=int)
+    ens_rtypes = np.empty((Settings.ens_size, 3, nr), dtype=int)
+    ens_ia = np.empty((Settings.ens_size, ns, nr), dtype=int)
+    tracking = []
+    
+    for i in range(len(ens_model)):
+        (stoi, rStoi, rtypes, ia) = ng.generateSTFromAntimony(ens_model[i])
+        
+        ens_stoi[i] = stoi
+        ens_rtypes[i] = rtypes
+        ens_ia[i] = ia
+        tracking.append(rStoi.tolist())
+        
+    
+    return (ens_stoi, ens_rtypes, ens_ia, tracking)
 
 
 def ensembleFluxControlCoefficient(model_col):

@@ -17,6 +17,7 @@ import ioutils
 import analysis
 import time
 import copy
+import warnings
 
 #np.seterr(all='raise')
 
@@ -43,7 +44,7 @@ class SettingsClass:
             
         # 'FFL_m', 'Linear_m', 'Nested_m', 'Branched_m', 'Feedback_m', 'sigPath'
         # 'FFL_r', 'Linear_r', 'Nested_r', 'Branched_r', 'Feedback_r'
-        self.modelType = 'FFL_m'
+        self.modelType = 'Branched_m'
         
         
         # General settings ====================================================
@@ -142,7 +143,7 @@ class SettingsClass:
         # Flag to save model components for caching
         self.EXPORT_CACHE = True
         # Path to save the output
-        self.EXPORT_PATH = './outputs/loadCache'
+        self.EXPORT_PATH = './outputs/crashingmodel'
         # Overwrite the contents if the folder exists
         self.EXPORT_OVERWRITE = False
         # Create folders based on model names
@@ -150,43 +151,7 @@ class SettingsClass:
         
         
         # Flag to run the algorithm - temporary
-        self.RUN = True
-
-
-def customGetScaledConcentrationControlCoefficientMatrix(r):
-    """
-    Numpy implementation of GetScaledConcentrationControlCoefficientMatrix()
-    that does not force run steadyState()
-    
-    Parameters
-    ----------
-    r : roadrunner.RoadRunner()
-        roadrunner instance.
-
-    Returns
-    -------
-    T5 : numpy.ndarray
-        Scaled concentration control coefficient matrix.
-    """
-    
-    re = r.simulate(0, 10000, 5)
-    # r.steadyState()
-    uelast = r.getUnscaledElasticityMatrix()
-    Nr = r.getNrMatrix()
-    T1 = np.dot(Nr, uelast)
-    LinkMatrix = r.getLinkMatrix()
-    Jac = np.dot(T1, LinkMatrix)
-    T2 = np.negative(Jac)
-    Inv = np.linalg.inv(T2)
-    T3 = np.dot(Inv, Nr)
-    T4 = np.dot(LinkMatrix, T3)
-
-    a = np.tile(r.getReactionRates(), (np.shape(T4)[0], 1))
-    b = np.tile(r.getFloatingSpeciesConcentrations(), (np.shape(T4)[1], 1)).T
-    
-    T5 = np.multiply(T4, np.divide(a, b))
-    
-    return T5
+        self.RUN = False
 
 
 def check_duplicate_reaction(data):
@@ -353,11 +318,11 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
             eval_ia[m] = mut_ia[m]
             eval_concCC[m] = mut_concCC[m]
         else:
-            antStr = ng.generateAntfromST(realFloatingIds, realBoundaryIds, 
-                                          stoi, rtypes, ia, boundary_init=realBoundaryVal)
+            antStr = ng.generateAntimonyfromST(realFloatingIds, realBoundaryIds, 
+                                               stoi, rtypes, ia, boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
-                concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
+                concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
                 # concCC = r.getScaledConcentrationControlCoefficientMatrix()
                 
                 counts = 0
@@ -380,7 +345,7 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
                     if res.fun < mut_dist[m]:
                         r.resetToOrigin()
                         r.setValues(r.getGlobalParameterIds(), res.x)
-                        concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
+                        concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
                         # concCC = r.getScaledConcentrationControlCoefficientMatrix()
                         if np.isnan(concCC).any():
                             eval_dist[m] = mut_dist[m]
@@ -472,11 +437,11 @@ def initialize(Settings):
                     raise Exception("Failed to initialize. Population size may be too large.")
             except:
                 pass
-        antStr = ng.generateAntfromST(realFloatingIds, realBoundaryIds, 
-                                      st, rTypes, ia, boundary_init=realBoundaryVal)
+        antStr = ng.generateAntimonyfromST(realFloatingIds, realBoundaryIds, 
+                                           st, rTypes, ia, boundary_init=realBoundaryVal)
         try:
             r = te.loada(antStr)
-            concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
+            concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
             # concCC = r.getScaledConcentrationControlCoefficientMatrix()
             
             counts = 0
@@ -499,7 +464,7 @@ def initialize(Settings):
                 tracking.append(stt.tolist())
                 ens_rtypes[numGoodModels] = rTypes
                 ens_ia[numGoodModels] = ia
-                concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
+                concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
                 # concCC = r.getScaledConcentrationControlCoefficientMatrix()
                 concCC[np.abs(concCC) < 1e-7] = 0
                 if r.conservedMoietyAnalysis:
@@ -507,6 +472,7 @@ def initialize(Settings):
                 ens_concCC[numGoodModels] = concCC
                 
                 numGoodModels += 1
+                print(numGoodModels)
         except:
             numBadModels += 1
         
@@ -584,11 +550,11 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtypes,
             rnd_ia[l] = listia[l]
             rnd_concCC[l] = listconcCC[l]
         else:
-            antStr = ng.generateAntfromST(realFloatingIds, realBoundaryIds, 
-                                          st, rTypes, ia, boundary_init=realBoundaryVal)
+            antStr = ng.generateAntimonyfromST(realFloatingIds, realBoundaryIds, 
+                                               st, rTypes, ia, boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
-                concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
+                concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
                 # concCC = r.getScaledConcentrationControlCoefficientMatrix()
                 
                 counts = 0
@@ -618,7 +584,7 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtypes,
                         rnd_stoi[l] = st
                         rnd_rtypes[l] = rTypes
                         rnd_ia[l] = ia
-                        concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
+                        concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
                         # concCC = r.getScaledConcentrationControlCoefficientMatrix()
                         concCC[np.abs(concCC) < 1e-7] = 0
                         if r.conservedMoietyAnalysis:
@@ -1005,9 +971,9 @@ if __name__ == '__main__':
         for i,j in enumerate(ens_stoi):
             r = te.loada(ens_model[i])
             param = r.getGlobalParameterValues()
-            newAnt = ng.generateAntfromST(list(fid_dict.values()), list(bid_dict.values()),
-                                          j, ens_rtypes[i], ens_ia[i],
-                                          boundary_init=realBoundaryVal)
+            newAnt = ng.generateAntimonyfromST(list(fid_dict.values()), list(bid_dict.values()),
+                                               j, ens_rtypes[i], ens_ia[i],
+                                               boundary_init=realBoundaryVal)
             # TODO: remove
             r = te.loada(newAnt)
             r.setValues(r.getGlobalParameterIds(), param)
