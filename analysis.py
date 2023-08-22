@@ -77,12 +77,10 @@ def cacheFallBack2(Settings, ens_model, ns, nr):
     
     for i in range(len(ens_model)):
         (stoi, rStoi, rtypes, ia) = ng.generateSTFromAntimony(ens_model[i])
-        
         ens_stoi[i] = stoi
         ens_rtypes[i] = rtypes
         ens_ia[i] = ia
         tracking.append(rStoi.tolist())
-        
     
     return (ens_stoi, ens_rtypes, ens_ia, tracking)
 
@@ -223,7 +221,7 @@ def selectWithKernalDensity(dist_top):
     from scipy import signal
     from sklearn import neighbors
     
-    x = np.linspace(0, np.max(dist_top), int(np.max(dist_top)*10))
+    x = np.linspace(0, np.max(dist_top), int(np.max(dist_top)*100))
 
     dist_top_reshape = dist_top.reshape((len(dist_top),1))
     
