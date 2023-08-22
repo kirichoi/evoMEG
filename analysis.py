@@ -31,6 +31,8 @@ def customGetScaledConcentrationControlCoefficientMatrix(r):
     """
     
     re = r.simulate(0, 10000, 5)
+    if any(re[-1,1:] > 100):
+        raise Exception
     # r.steadyState()
     uelast = r.getUnscaledElasticityMatrix()
     Nr = r.getNrMatrix()
