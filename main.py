@@ -44,7 +44,7 @@ class SettingsClass:
             
         # 'FFL_m', 'Linear_m', 'Nested_m', 'Branched_m', 'Feedback_m', 'sigPath'
         # 'FFL_r', 'Linear_r', 'Nested_r', 'Branched_r', 'Feedback_r'
-        self.modelType = 'Branched_m'
+        self.modelType = 'FFL_m'
         
         
         # General settings ====================================================
@@ -68,6 +68,8 @@ class SettingsClass:
         self.conservedMoiety = False
         # When testing, check if the correst stoichiometry was recovered (default: True)
         self.checkCorrectStoichiometry = True
+        # Prune unnecessary boundary species at the end (default: True)
+        self.prune = True
                 
         
         # Termination criterion settings ======================================
@@ -86,7 +88,7 @@ class SettingsClass:
         # Threshold top p-percent smallest distance
         self.thres_top = None
         # Maximum run time allowed in minutes
-        self.max_run_time = 3
+        self.max_run_time = None
         
         
         # Optimizer settings ==================================================
@@ -322,8 +324,8 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
                                                stoi, rtypes, ia, boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
-                concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
-                # concCC = r.getScaledConcentrationControlCoefficientMatrix()
+                # concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
+                concCC = r.getScaledConcentrationControlCoefficientMatrix()
                 
                 counts = 0
                 countf = 0
@@ -345,8 +347,8 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
                     if res.fun < mut_dist[m]:
                         r.resetToOrigin()
                         r.setValues(r.getGlobalParameterIds(), res.x)
-                        concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
-                        # concCC = r.getScaledConcentrationControlCoefficientMatrix()
+                        # concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
+                        concCC = r.getScaledConcentrationControlCoefficientMatrix()
                         if np.isnan(concCC).any():
                             eval_dist[m] = mut_dist[m]
                             eval_model[m] = mut_model[m]
@@ -441,8 +443,8 @@ def initialize(Settings):
                                            st, rTypes, ia, boundary_init=realBoundaryVal)
         try:
             r = te.loada(antStr)
-            concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
-            # concCC = r.getScaledConcentrationControlCoefficientMatrix()
+            # concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
+            concCC = r.getScaledConcentrationControlCoefficientMatrix()
             
             counts = 0
             countf = 0
@@ -464,8 +466,8 @@ def initialize(Settings):
                 tracking.append(stt.tolist())
                 ens_rtypes[numGoodModels] = rTypes
                 ens_ia[numGoodModels] = ia
-                concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
-                # concCC = r.getScaledConcentrationControlCoefficientMatrix()
+                # concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
+                concCC = r.getScaledConcentrationControlCoefficientMatrix()
                 concCC[np.abs(concCC) < 1e-7] = 0
                 if r.conservedMoietyAnalysis:
                     concCC = concCC[np.argsort(r.getFloatingSpeciesIds())]
@@ -554,8 +556,8 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtypes,
                                                st, rTypes, ia, boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
-                concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
-                # concCC = r.getScaledConcentrationControlCoefficientMatrix()
+                # concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
+                concCC = r.getScaledConcentrationControlCoefficientMatrix()
                 
                 counts = 0
                 countf = 0
@@ -584,8 +586,8 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtypes,
                         rnd_stoi[l] = st
                         rnd_rtypes[l] = rTypes
                         rnd_ia[l] = ia
-                        concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
-                        # concCC = r.getScaledConcentrationControlCoefficientMatrix()
+                        # concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
+                        concCC = r.getScaledConcentrationControlCoefficientMatrix()
                         concCC[np.abs(concCC) < 1e-7] = 0
                         if r.conservedMoietyAnalysis:
                             concCC = concCC[np.argsort(r.getFloatingSpeciesIds())]
@@ -785,7 +787,7 @@ if __name__ == '__main__':
         process = psutil.Process()
         
         # TODO: bundle dist stats in a single 2D array
-        # Initualize Lists
+        # Initialize fitness statistics
         if Settings.CACHED_DIR != None:
             (best_dist, avg_dist, med_dist, top_dist) = ioutils.readStats(Settings)
         else:
@@ -920,6 +922,91 @@ if __name__ == '__main__':
         print("Run time: {}".format(runtime))
         
 #%%
+        # TODO: remove unnecessary boundary species
+        if Settings.prune:
+            bidx = np.arange(realNumFloating, realNumFloating+realNumBoundary)
+            
+            for i,j in enumerate(ens_model):
+                st = ens_stoi[i]
+                rTypes = ens_rtypes[i]
+                ia = ens_ia[i]
+                for k in range(len(st[0])):
+                    if len(st) < realNumFloating + realNumBoundary:
+                        pass
+                    else:
+                        if np.sum(st[:,k] > 0) > 1:
+                            if np.sum(st[bidx,k] > 0) > 1:
+                                ridx = np.random.choice(np.arange(realNumBoundary)[st[bidx,k] > 0])
+                                st[bidx[st[bidx,k] > 0][ridx],k] = 0
+                                if rTypes[0,k] == 3:
+                                    rTypes[0,k] = 1
+                                elif rTypes[0,k] == 2:
+                                    rTypes[0,k] = 0
+                            else:
+                                if len(st[bidx[st[bidx,k] > 0],k]) > 0:
+                                    st[bidx[st[bidx,k] > 0],k] = 0
+                                    if rTypes[0,k] == 3:
+                                        rTypes[0,k] = 1
+                                    elif rTypes[0,k] == 2:
+                                        rTypes[0,k] = 0
+                            
+                        if np.sum(st[:,k] < 0) > 1:
+                            if np.sum(st[bidx,k] < 0) > 1:
+                                ridx = np.random.choice(np.arange(realNumBoundary)[st[bidx,k] < 0])
+                                st[bidx[st[bidx,k] < 0][ridx],k] = 0
+                                if rTypes[0,k] == 3:
+                                    rTypes[0,k] = 2
+                                elif rTypes[0,k] == 1:
+                                    rTypes[0,k] = 0
+                            else:
+                                if len(st[bidx[st[bidx,k] < 0],k]) > 0:
+                                    st[bidx[st[bidx,k] < 0],k] = 0
+                                    if rTypes[0,k] == 3:
+                                        rTypes[0,k] = 2
+                                    elif rTypes[0,k] == 1:
+                                        rTypes[0,k] = 0
+                    
+                    if np.sum(st[:,k] < -1) > 0:
+                        if rTypes[0,k] == 3:
+                            rTypes[0,k] = 2
+                        elif rTypes[0,k] == 1:
+                            rTypes[0,k] = 0
+                    
+                    if np.sum(st[:,k] > 1) > 0:
+                        if rTypes[0,k] == 3:
+                            rTypes[0,k] = 1
+                        elif rTypes[0,k] == 2:
+                            rTypes[0,k] = 0
+                    
+                antStr = ng.generateAntimonyfromST(realFloatingIds, realBoundaryIds, 
+                                                   st, rTypes, ia, boundary_init=realBoundaryVal)
+                r = te.loada(antStr)
+                p_bound = ng.generateParameterBoundary(r.getGlobalParameterIds())
+                res = scipy.optimize.differential_evolution(f1, args=(r,), 
+                                    bounds=p_bound, maxiter=Settings.optiMaxIter, 
+                                    tol=Settings.optiTol, polish=Settings.optiPolish, 
+                                    seed=Settings.r_seed)
+            
+                r.resetToOrigin()
+                r.setValues(r.getGlobalParameterIds(), res.x)
+                # concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
+                concCC = r.getScaledConcentrationControlCoefficientMatrix()
+                concCC[np.abs(concCC) < 1e-7] = 0
+                if r.conservedMoietyAnalysis:
+                    concCC = concCC[np.argsort(r.getFloatingSpeciesIds())]
+                
+                ens_dist[i] = res.fun
+                ens_model[i] = r.getAntimony(current=True)
+                ens_stoi[i] = st
+                ens_rtypes[i] = rTypes
+                ens_ia[i] = ia
+                ens_concCC[i] = concCC
+                
+            dist_top_ind = np.argsort(ens_dist)
+            dist_top = ens_dist[dist_top_ind]
+            model_top = ens_model[dist_top_ind]
+            
+        
         if Settings.checkCorrectStoichiometry and Settings.MODEL_INPUT == None:
             ens_stt = copy.deepcopy(ens_stoi[:,realFloatingIdsInd])
             ens_stt[ens_stt > 0] = 1
@@ -929,7 +1016,6 @@ if __name__ == '__main__':
             else:
                 print('The original model is not in the population')
 
-        # TODO: remove unnecessary boundary species
 
         if Settings.refine:
             print("Refining")
