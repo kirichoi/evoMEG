@@ -866,12 +866,12 @@ def generateLinearChainAnt(ns):
     return antStr
 
 
-# TODO: generate reaction list from aliases
-def generateSTfromAntimony(antStr, realids=None):
+def generateSTfromAntimony(antStr, real_sort=None):
     """
     Generate reaction list from a model encoded in Antimony
     
     :param antStr: model encoded in Antimony
+    :param real_sort: sorted list of true species names
     """
     import libsbml
     import sympy
@@ -993,17 +993,17 @@ def generateSTfromAntimony(antStr, realids=None):
                 rType = 3
         
         for j in range(len(rct[i])):
-            if realids != None:
+            if real_sort != None:
                 z = np.where(rct[i][j] == fbId)[0][0]
-                r_idx = int(realids[z][1:])
+                r_idx = int(real_sort[z][1:])
             else:
                 r_idx = int(rct[i][j][1:])
             stoi[r_idx][i] -= 1
             
         for j in range(len(prd[i])):
-            if realids != None:
+            if real_sort != None:
                 z = np.where(prd[i][j] == fbId)[0][0]
-                p_idx = int(realids[z][1:])
+                p_idx = int(real_sort[z][1:])
             else:
                 p_idx = int(prd[i][j][1:])
             stoi[p_idx][i] += 1
