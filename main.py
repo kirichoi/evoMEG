@@ -70,7 +70,7 @@ class SettingsClass:
         self.checkCorrectStoichiometry = True
         # Prune unnecessary boundary species at the end (default: True)
         self.prune = True
-                
+        
         
         # Termination criterion settings ======================================
         # Settings to control termination criterion
@@ -100,7 +100,7 @@ class SettingsClass:
         self.optiTol = 1.
         # Allow polishing parameters for optimizer (default: False)
         self.optiPolish = False
-        # Run additional optimization at the end for tighter fitness (default: False)
+        # Run optimization at the end for better fitness representation (default: False)
         self.refine = False
         # Tolerance for additional optimization at the end (default: 0.01)
         self.refineTol = 0.01
@@ -145,7 +145,7 @@ class SettingsClass:
         # Flag to save model components for caching
         self.EXPORT_CACHE = True
         # Path to save the output
-        self.EXPORT_PATH = './outputs/crashingmodel'
+        self.EXPORT_PATH = './outputs/prune'
         # Overwrite the contents if the folder exists
         self.EXPORT_OVERWRITE = False
         # Create folders based on model names
@@ -153,7 +153,7 @@ class SettingsClass:
         
         
         # Flag to run the algorithm - temporary
-        self.RUN = False
+        self.RUN = True
 
 
 def check_duplicate_reaction(data):
@@ -324,13 +324,14 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
                                                stoi, rtypes, ia, boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
-                # concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
-                concCC = r.getScaledConcentrationControlCoefficientMatrix()
+                gpid = [x for x in r.getGlobalParameterIds() if not x.startswith('S')]
+                concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
+                # concCC = r.getScaledConcentrationControlCoefficientMatrix()
                 
                 counts = 0
                 countf = 0
                 
-                p_bound = ng.generateParameterBoundary(r.getGlobalParameterIds())
+                p_bound = ng.generateParameterBoundary(gpid)
                 res = scipy.optimize.differential_evolution(f1, args=(r,), 
                             bounds=p_bound, maxiter=Settings.optiMaxIter, 
                             tol=Settings.optiTol, polish=Settings.optiPolish, 
@@ -346,9 +347,9 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
                 else:
                     if res.fun < mut_dist[m]:
                         r.resetToOrigin()
-                        r.setValues(r.getGlobalParameterIds(), res.x)
-                        # concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
-                        concCC = r.getScaledConcentrationControlCoefficientMatrix()
+                        r.setValues(gpid, res.x)
+                        concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
+                        # concCC = r.getScaledConcentrationControlCoefficientMatrix()
                         if np.isnan(concCC).any():
                             eval_dist[m] = mut_dist[m]
                             eval_model[m] = mut_model[m]
@@ -361,6 +362,7 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
                             if r.conservedMoietyAnalysis:
                                 concCC = concCC[np.argsort(r.getFloatingSpeciesIds())]
                             eval_dist[m] = res.fun
+                            r.reset()
                             eval_model[m] = r.getAntimony(current=True)
                             eval_stoi[m] = stoi
                             tracking.append(stt.tolist())
@@ -443,13 +445,14 @@ def initialize(Settings):
                                            st, rTypes, ia, boundary_init=realBoundaryVal)
         try:
             r = te.loada(antStr)
-            # concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
-            concCC = r.getScaledConcentrationControlCoefficientMatrix()
+            gpid = [x for x in r.getGlobalParameterIds() if not x.startswith('S')]
+            concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
+            # concCC = r.getScaledConcentrationControlCoefficientMatrix()
             
             counts = 0
             countf = 0
             
-            p_bound = ng.generateParameterBoundary(r.getGlobalParameterIds())
+            p_bound = ng.generateParameterBoundary(gpid)
             res = scipy.optimize.differential_evolution(f1, args=(r,), 
                                 bounds=p_bound, maxiter=Settings.optiMaxIter, 
                                 tol=Settings.optiTol, polish=Settings.optiPolish, 
@@ -459,15 +462,15 @@ def initialize(Settings):
                 numBadModels += 1
             else:
                 r.resetToOrigin()
-                r.setValues(r.getGlobalParameterIds(), res.x)
+                r.setValues(gpid, res.x)
                 ens_dist[numGoodModels] = res.fun
                 ens_model[numGoodModels] = r.getAntimony(current=True)
                 ens_stoi[numGoodModels] = st
                 tracking.append(stt.tolist())
                 ens_rtypes[numGoodModels] = rTypes
                 ens_ia[numGoodModels] = ia
-                # concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
-                concCC = r.getScaledConcentrationControlCoefficientMatrix()
+                concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
+                # concCC = r.getScaledConcentrationControlCoefficientMatrix()
                 concCC[np.abs(concCC) < 1e-7] = 0
                 if r.conservedMoietyAnalysis:
                     concCC = concCC[np.argsort(r.getFloatingSpeciesIds())]
@@ -556,13 +559,14 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtypes,
                                                st, rTypes, ia, boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
-                # concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
-                concCC = r.getScaledConcentrationControlCoefficientMatrix()
+                gpid = [x for x in r.getGlobalParameterIds() if not x.startswith('S')]
+                concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
+                # concCC = r.getScaledConcentrationControlCoefficientMatrix()
                 
                 counts = 0
                 countf = 0
                 
-                p_bound = ng.generateParameterBoundary(r.getGlobalParameterIds())
+                p_bound = ng.generateParameterBoundary(gpid)
                 res = scipy.optimize.differential_evolution(f1, args=(r,), 
                             bounds=p_bound, maxiter=Settings.optiMaxIter, 
                             tol=Settings.optiTol, polish=Settings.optiPolish, 
@@ -579,15 +583,15 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtypes,
                 else:
                     if res.fun < listDist[l]:
                         r.resetToOrigin()
-                        r.setValues(r.getGlobalParameterIds(), res.x)
+                        r.setValues(gpid, res.x)
                         rnd_dist[l] = res.fun
                         rnd_model[l] = r.getAntimony(current=True)
                         tracking.append(stt.tolist())
                         rnd_stoi[l] = st
                         rnd_rtypes[l] = rTypes
                         rnd_ia[l] = ia
-                        # concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
-                        concCC = r.getScaledConcentrationControlCoefficientMatrix()
+                        concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
+                        # concCC = r.getScaledConcentrationControlCoefficientMatrix()
                         concCC[np.abs(concCC) < 1e-7] = 0
                         if r.conservedMoietyAnalysis:
                             concCC = concCC[np.argsort(r.getFloatingSpeciesIds())]
@@ -815,7 +819,6 @@ if __name__ == '__main__':
         dist_top_ind = np.argsort(ens_dist)
         dist_top = ens_dist[dist_top_ind]
         model_top = ens_model[dist_top_ind]
-        concCC_top = ens_concCC[dist_top_ind]
         
         best_dist.append(dist_top[0])
         avg_dist.append(np.average(dist_top))
@@ -922,7 +925,6 @@ if __name__ == '__main__':
         print("Run time: {}".format(runtime))
         
 #%%
-        # TODO: remove unnecessary boundary species
         if Settings.prune:
             bidx = np.arange(realNumFloating, realNumFloating+realNumBoundary)
             
@@ -966,13 +968,13 @@ if __name__ == '__main__':
                                     elif rTypes[0,k] == 1:
                                         rTypes[0,k] = 0
                     
-                    if np.sum(st[:,k] < -1) > 0:
+                    if np.sum(st[realNumFloating:,k] < -1) > 0:
                         if rTypes[0,k] == 3:
                             rTypes[0,k] = 2
                         elif rTypes[0,k] == 1:
                             rTypes[0,k] = 0
                     
-                    if np.sum(st[:,k] > 1) > 0:
+                    if np.sum(st[realNumFloating:,k] > 1) > 0:
                         if rTypes[0,k] == 3:
                             rTypes[0,k] = 1
                         elif rTypes[0,k] == 2:
@@ -981,32 +983,29 @@ if __name__ == '__main__':
                 antStr = ng.generateAntimonyfromST(realFloatingIds, realBoundaryIds, 
                                                    st, rTypes, ia, boundary_init=realBoundaryVal)
                 r = te.loada(antStr)
-                p_bound = ng.generateParameterBoundary(r.getGlobalParameterIds())
+                gpid = [x for x in r.getGlobalParameterIds() if not x.startswith('S')]
+                p_bound = ng.generateParameterBoundary(gpid)
                 res = scipy.optimize.differential_evolution(f1, args=(r,), 
                                     bounds=p_bound, maxiter=Settings.optiMaxIter, 
                                     tol=Settings.optiTol, polish=Settings.optiPolish, 
                                     seed=Settings.r_seed)
             
                 r.resetToOrigin()
-                r.setValues(r.getGlobalParameterIds(), res.x)
-                # concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
-                concCC = r.getScaledConcentrationControlCoefficientMatrix()
+                r.setValues(gpid, res.x)
+                concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
+                # concCC = r.getScaledConcentrationControlCoefficientMatrix()
                 concCC[np.abs(concCC) < 1e-7] = 0
                 if r.conservedMoietyAnalysis:
                     concCC = concCC[np.argsort(r.getFloatingSpeciesIds())]
                 
                 ens_dist[i] = res.fun
+                r.reset()
                 ens_model[i] = r.getAntimony(current=True)
                 ens_stoi[i] = st
                 ens_rtypes[i] = rTypes
                 ens_ia[i] = ia
                 ens_concCC[i] = concCC
                 
-            dist_top_ind = np.argsort(ens_dist)
-            dist_top = ens_dist[dist_top_ind]
-            model_top = ens_model[dist_top_ind]
-            
-        
         if Settings.checkCorrectStoichiometry and Settings.MODEL_INPUT == None:
             ens_stt = copy.deepcopy(ens_stoi[:,realFloatingIdsInd])
             ens_stt[ens_stt > 0] = 1
@@ -1022,7 +1021,8 @@ if __name__ == '__main__':
             for i,j in enumerate(ens_model):
                 try:
                     r = te.loada(j)
-                    p_bound = ng.generateParameterBoundary(r.getGlobalParameterIds())
+                    gpid = [x for x in r.getGlobalParameterIds() if not x.startswith('S')]
+                    p_bound = ng.generateParameterBoundary(gpid)
                     res = scipy.optimize.differential_evolution(f1, args=(r,), 
                                         bounds=p_bound, maxiter=Settings.optiMaxIter, 
                                         tol=Settings.refineTol, polish=True, 
@@ -1030,7 +1030,7 @@ if __name__ == '__main__':
                     
                     if res.success and res.fun < 1e6:
                         r.resetToOrigin()
-                        r.setValues(r.getGlobalParameterIds(), res.x)
+                        r.setValues(gpid, res.x)
                         ens_dist[i] = res.fun
                         ens_model[i] = r.getAntimony(current=True)
                 except:
@@ -1041,11 +1041,6 @@ if __name__ == '__main__':
                     pass        
                 antimony.clearPreviousLoads()
                 antimony.freeAll()
-                
-            memory.append(process.memory_info().rss)
-            dist_top_ind = np.argsort(ens_dist)
-            dist_top = ens_dist[dist_top_ind]
-            model_top = ens_model[dist_top_ind]
             
             best_dist[-1] = dist_top[0]
             avg_dist[-1] = np.average(dist_top)
@@ -1071,9 +1066,11 @@ if __name__ == '__main__':
             antimony.clearPreviousLoads()
             antimony.freeAll()
 
-        model_top = ens_model[dist_top_ind]
         memory.append(process.memory_info().rss)
-        
+        dist_top_ind = np.argsort(ens_dist)
+        dist_top = ens_dist[dist_top_ind]
+        model_top = ens_model[dist_top_ind]
+
         # Collect models
         kdeOutput = analysis.selectWithKernalDensity(dist_top)
         
