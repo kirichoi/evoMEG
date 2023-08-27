@@ -433,8 +433,8 @@ def testModels(modelType):
         Kf3 = 0.75830845241
         Kf4 = 0.27503984992
        
-        S0 = 3
-        S5 = 5
+        S0 = 1
+        S5 = 1
         S1 = 1
         S2 = 1
         S3 = 1
@@ -462,8 +462,8 @@ def testModels(modelType):
         Kr3 = 0.27057924345
         Kr4 = 0.1026847763
        
-        S0 = 3
-        S5 = 5
+        S0 = 1
+        S5 = 1
         S1 = 1
         S2 = 1
         S3 = 1
@@ -488,8 +488,8 @@ def testModels(modelType):
         Kf4 = 0.148522702962
         Kf5 = 0.348927696783
        
-        S0 = 3
-        S4 = 5
+        S0 = 1
+        S4 = 1
         S1 = 1
         S2 = 1
         S3 = 1
@@ -519,8 +519,8 @@ def testModels(modelType):
         Kr4 = 0.1026847763
         Kr5 = 0.185479288476
        
-        S0 = 3
-        S4 = 5
+        S0 = 1
+        S4 = 1
         S1 = 1
         S2 = 1
         S3 = 1
@@ -542,8 +542,8 @@ def testModels(modelType):
         Kf3 = 0.75830845241
         Kf4 = 0.148522702962
        
-        S0 = 3
-        S4 = 5
+        S0 = 1
+        S4 = 1
         S1 = 1
         S2 = 1
         S3 = 1
@@ -570,8 +570,8 @@ def testModels(modelType):
         Kr3 = 0.27057924345
         Kr4 = 0.1026847763
        
-        S0 = 3
-        S4 = 5
+        S0 = 1
+        S4 = 1
         S1 = 1
         S2 = 1
         S3 = 1
@@ -593,8 +593,8 @@ def testModels(modelType):
         Kf3 = 0.75830845241
         Kf4 = 0.148522702962
        
-        S0 = 3
-        S4 = 5
+        S0 = 1
+        S4 = 1
         S1 = 1
         S2 = 1
         S3 = 1
@@ -621,8 +621,8 @@ def testModels(modelType):
         Kr3 = 0.27057924345
         Kr4 = 0.1026847763
        
-        S0 = 3
-        S4 = 5
+        S0 = 1
+        S4 = 1
         S1 = 1
         S2 = 1
         S3 = 1
@@ -645,8 +645,8 @@ def testModels(modelType):
         Kf4 = 0.148522702962
         Ka0 = 0.883848629231
        
-        S0 = 3
-        S4 = 5
+        S0 = 1
+        S4 = 1
         S1 = 1
         S2 = 1
         S3 = 1
@@ -669,8 +669,8 @@ def testModels(modelType):
         Kf4 = 0.148522702962
         Ki0 = 0.974569278466
        
-        S0 = 3
-        S4 = 5
+        S0 = 1
+        S4 = 1
         S1 = 1
         S2 = 1
         S3 = 1
@@ -698,8 +698,8 @@ def testModels(modelType):
         Kr4 = 0.1026847763
         Ka0 = 0.883848629231
        
-        S0 = 3
-        S4 = 5
+        S0 = 1
+        S4 = 1
         S1 = 1
         S2 = 1
         S3 = 1
@@ -727,8 +727,8 @@ def testModels(modelType):
         Kr4 = 0.1026847763
         Ki0 = 0.974569278466
        
-        S0 = 3
-        S4 = 5
+        S0 = 1
+        S4 = 1
         S1 = 1
         S2 = 1
         S3 = 1
@@ -756,8 +756,8 @@ def testModels(modelType):
         Kf6 = 0.572677236248
         Kf7 = 0.497208763889
        
-        S0 = 3
-        S6 = 5
+        S0 = 1
+        S6 = 1
         S1 = 1
         S2 = 1
         S3 = 1
@@ -795,8 +795,8 @@ def testModels(modelType):
         Kr6 = 0.34908380750
         Kr7 = 0.16784787349
        
-        S0 = 3
-        S6 = 5
+        S0 = 1
+        S6 = 1
         S1 = 1
         S2 = 1
         S3 = 1
@@ -853,7 +853,7 @@ def testModels(modelType):
         Ka2 = 0.6276983967
         Ka4 = 0.1143526464
         
-        S6 = 3
+        S6 = 1
         S0 = 1
         S1 = 1
         S2 = 1
@@ -880,7 +880,7 @@ def testModels(modelType):
         Kr3 = 0.31057924345
         Ka0 = 0.723848629231
        
-        S0 = 3
+        S0 = 1
         S1 = 1
         S2 = 1
         S3 = 1
@@ -905,7 +905,7 @@ def testModels(modelType):
         Kr3 = 0.31057924345
         Ki0 = 0.814569278466
        
-        S0 = 3
+        S0 = 1
         S1 = 1
         S2 = 1
         S3 = 1
@@ -930,7 +930,7 @@ def testModels(modelType):
         Kr3 = 0.31057924345
         Ka0 = 0.723848629231
        
-        S0 = 3
+        S0 = 1
         S1 = 1
         S2 = 1
         S3 = 1
@@ -955,7 +955,7 @@ def testModels(modelType):
         Kr3 = 0.31057924345
         Ki0 = 0.814569278466
        
-        S0 = 3
+        S0 = 1
         S1 = 1
         S2 = 1
         S3 = 1
