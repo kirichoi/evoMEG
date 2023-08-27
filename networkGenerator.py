@@ -243,7 +243,6 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
                 rcts = posrct[realFloatingIdsInd,r_idx]
                 if np.sum(stoi[realBoundaryIdsInd,r_idx] > 0) > 0:
                     rctbs = np.repeat(False, len(realBoundaryIdsInd))
-                    print('y')
                 else:
                     rctbs = posrct[realBoundaryIdsInd,r_idx]
                 c1 = np.sum(rcts)
@@ -264,7 +263,6 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
                 prds = posprd[realFloatingIdsInd,r_idx]
                 if np.sum(stoi[realBoundaryIdsInd,r_idx] < 0) > 0:
                     prdbs = np.repeat(False, len(realBoundaryIdsInd))
-                    print('y')
                 else:
                     prdbs = posprd[realBoundaryIdsInd,r_idx]
                 c1 = np.sum(prds)
@@ -286,7 +284,6 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
                 rcts = allposrct[realFloatingIdsInd,r_idx]
                 if np.sum(stoi[realBoundaryIdsInd,r_idx] > 0) > 0:
                     rctbs = np.repeat(False, len(realBoundaryIdsInd))
-                    print('y')
                 else:
                     rctbs = allposrct[realBoundaryIdsInd,r_idx]
                 c1 = np.sum(rcts)
@@ -308,7 +305,6 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
                 prds = posprd[realFloatingIdsInd,r_idx]
                 if np.sum(stoi[realBoundaryIdsInd,r_idx] < 0) > 0:
                     prdbs = np.repeat(False, len(realBoundaryIdsInd))
-                    print('y')
                 else:
                     prdbs = posprd[realBoundaryIdsInd,r_idx]
                 prdbs = posprd[realBoundaryIdsInd,r_idx]
@@ -331,7 +327,6 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
                 rcts = posrct[realFloatingIdsInd,r_idx]
                 if np.sum(stoi[realBoundaryIdsInd,r_idx] > 0) > 0:
                     rctbs = np.repeat(False, len(realBoundaryIdsInd))
-                    print('y')
                 else:
                     rctbs = posrct[realBoundaryIdsInd,r_idx]
                 c1 = np.sum(rcts)
@@ -352,7 +347,6 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
                 prds = allposprd[realFloatingIdsInd,r_idx]
                 if np.sum(stoi[realBoundaryIdsInd,r_idx] < 0) > 0:
                     prdbs = np.repeat(False, len(realBoundaryIdsInd))
-                    print('y')
                 else:
                     prdbs = allposprd[realBoundaryIdsInd,r_idx]
                 c1 = np.sum(prds)
@@ -375,7 +369,6 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
                 rcts = allposrct[realFloatingIdsInd,r_idx]
                 if np.sum(stoi[realBoundaryIdsInd,r_idx] > 0) > 0:
                     rctbs = np.repeat(False, len(realBoundaryIdsInd))
-                    print('y')
                 else:
                     rctbs = allposrct[realBoundaryIdsInd,r_idx]
                 c1 = np.sum(rcts)
@@ -397,7 +390,6 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
                 prds = allposprd[realFloatingIdsInd,r_idx]
                 if np.sum(stoi[realBoundaryIdsInd,r_idx] < 0) > 0:
                     prdbs = np.repeat(False, len(realBoundaryIdsInd))
-                    print('y')
                 else:
                     prdbs = allposprd[realBoundaryIdsInd,r_idx]
                 c1 = np.sum(prds)
@@ -488,7 +480,10 @@ def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd,
     if rTyper == ReactionType.UNIUNI:
         if rsum == 0:
             rcts = posrct[realFloatingIdsInd,r_idx]
-            rctbs = posrct[realBoundaryIdsInd,r_idx]
+            if np.sum(stoi[realBoundaryIdsInd,r_idx] > 0) > 0:
+                rctbs = np.repeat(False, len(realBoundaryIdsInd))
+            else:
+                rctbs = posrct[realBoundaryIdsInd,r_idx]
             c1 = np.sum(rcts)
             c2 = np.sum(rctbs)
             posRctInd = np.empty(c1+c2, dtype=int)
@@ -504,7 +499,10 @@ def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd,
             posprd[rct_id,r_idx] = False
         if psum == 0:
             prds = posprd[realFloatingIdsInd,r_idx]
-            prdbs = posprd[realBoundaryIdsInd,r_idx]
+            if np.sum(stoi[realBoundaryIdsInd,r_idx] < 0) > 0:
+                prdbs = np.repeat(False, len(realBoundaryIdsInd))
+            else:
+                prdbs = posprd[realBoundaryIdsInd,r_idx]
             c1 = np.sum(prds)
             c2 = np.sum(prdbs)
             posPrdInd = np.empty(c1+c2, dtype=int)
@@ -521,7 +519,10 @@ def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd,
     elif rTyper == ReactionType.BIUNI:
         if rsum < 2:
             rcts = posrct[realFloatingIdsInd,r_idx]
-            rctbs = posrct[realBoundaryIdsInd,r_idx]
+            if np.sum(stoi[realBoundaryIdsInd,r_idx] > 0) > 0:
+                rctbs = np.repeat(False, len(realBoundaryIdsInd))
+            else:
+                rctbs = posrct[realBoundaryIdsInd,r_idx]
             c1 = np.sum(rcts)
             c2 = np.sum(rctbs)
             posRctInd = np.empty(c1+c2, dtype=int)
@@ -538,7 +539,10 @@ def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd,
             posprd[rct_id,r_idx] = False
         if psum == 0:
             prds = posprd[realFloatingIdsInd,r_idx]
-            prdbs = posprd[realBoundaryIdsInd,r_idx]
+            if np.sum(stoi[realBoundaryIdsInd,r_idx] < 0) > 0:
+                prdbs = np.repeat(False, len(realBoundaryIdsInd))
+            else:
+                prdbs = posprd[realBoundaryIdsInd,r_idx]
             c1 = np.sum(prds)
             c2 = np.sum(prdbs)
             posPrdInd = np.empty(c1+c2, dtype=int)
@@ -555,7 +559,10 @@ def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd,
     elif rTyper == ReactionType.UNIBI:
         if rsum == 0:
             rcts = posrct[realFloatingIdsInd,r_idx]
-            rctbs = posrct[realBoundaryIdsInd,r_idx]
+            if np.sum(stoi[realBoundaryIdsInd,r_idx] > 0) > 0:
+                rctbs = np.repeat(False, len(realBoundaryIdsInd))
+            else:
+                rctbs = posrct[realBoundaryIdsInd,r_idx]
             c1 = np.sum(rcts)
             c2 = np.sum(rctbs)
             posRctInd = np.empty(c1+c2, dtype=int)
@@ -571,7 +578,10 @@ def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd,
             posprd[rct_id,r_idx] = False
         if psum < 2:
             prds = posprd[realFloatingIdsInd,r_idx]
-            prdbs = posprd[realBoundaryIdsInd,r_idx]
+            if np.sum(stoi[realBoundaryIdsInd,r_idx] < 0) > 0:
+                prdbs = np.repeat(False, len(realBoundaryIdsInd))
+            else:
+                prdbs = posprd[realBoundaryIdsInd,r_idx]
             c1 = np.sum(prds)
             c2 = np.sum(prdbs)
             posPrdInd = np.empty(c1+c2, dtype=int)
@@ -589,7 +599,10 @@ def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd,
     elif rTyper == ReactionType.BIBI:
         if rsum < 2:
             rcts = posrct[realFloatingIdsInd,r_idx]
-            rctbs = posrct[realBoundaryIdsInd,r_idx]
+            if np.sum(stoi[realBoundaryIdsInd,r_idx] > 0) > 0:
+                rctbs = np.repeat(False, len(realBoundaryIdsInd))
+            else:
+                rctbs = posrct[realBoundaryIdsInd,r_idx]
             c1 = np.sum(rcts)
             c2 = np.sum(rctbs)
             posRctInd = np.empty(c1+c2, dtype=int)
@@ -606,7 +619,10 @@ def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd,
             posprd[rct_id,r_idx] = False
         if psum < 2:
             prds = posprd[realFloatingIdsInd,r_idx]
-            prdbs = posprd[realBoundaryIdsInd,r_idx]
+            if np.sum(stoi[realBoundaryIdsInd,r_idx] < 0) > 0:
+                prdbs = np.repeat(False, len(realBoundaryIdsInd))
+            else:
+                prdbs = posprd[realBoundaryIdsInd,r_idx]
             c1 = np.sum(prds)
             c2 = np.sum(prdbs)
             posPrdInd = np.empty(c1+c2, dtype=int)
