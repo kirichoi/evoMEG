@@ -153,7 +153,7 @@ class SettingsClass:
         
         
         # Flag to run the algorithm - temporary
-        self.RUN = True
+        self.RUN = False
 
 
 def check_duplicate_reaction(data):
@@ -300,7 +300,7 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
                 noprd = any(np.sum(stt>0, axis=1) == 0)
                 norct = any(np.sum(stt<0, axis=1) == 0)
                 alreadyexists = stt.tolist() in tracking
-                dups = len(check_duplicate_reaction(stt)) > 0
+                dups = len(check_duplicate_reaction(st)) > 0
             except:
                 pass
             
@@ -422,9 +422,10 @@ def initialize(Settings):
         noprd = True
         norct = True
         alreadyexists = True
+        dups = True
         
         while (sttsum != 0 or sttrank != realNumFloating or
-               norct or noprd or alreadyexists):
+               norct or noprd or alreadyexists or dups):
             try:
                 st, stt, rTypes, ia = ng.generateST(realSigns, realFloatingIdsInd, 
                                                     realBoundaryIdsInd, ns, nr)
@@ -433,6 +434,7 @@ def initialize(Settings):
                 noprd = any(np.sum(stt>0, axis=1) == 0)
                 norct = any(np.sum(stt<0, axis=1) == 0)
                 alreadyexists = stt.tolist() in tracking
+                dups = len(check_duplicate_reaction(st)) > 0
             
                 numGen += 1
                 if int(numGen/1000) == (numGen/1000):
@@ -532,9 +534,10 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtypes,
         noprd = True
         norct = True
         alreadyexists = True
+        dups = True
         
         while (sttsum != 0 or sttrank != realNumFloating or
-               norct or noprd or alreadyexists) and (d < Settings.maxIter_gen):
+               norct or noprd or alreadyexists or dups) and (d < Settings.maxIter_gen):
             try:
                 st, stt, rTypes, ia = ng.generateST(realSigns, realFloatingIdsInd, 
                                                     realBoundaryIdsInd, ns, nr)
@@ -543,6 +546,7 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtypes,
                 noprd = any(np.sum(stt>0, axis=1) == 0)
                 norct = any(np.sum(stt<0, axis=1) == 0)
                 alreadyexists = stt.tolist() in tracking
+                dups = len(check_duplicate_reaction(st)) > 0
             except:
                 pass
             d += 1
