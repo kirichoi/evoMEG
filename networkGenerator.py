@@ -21,9 +21,9 @@ class Reversibility:
     REVERSIBLE = 1
 
 class RP1212:
-    UniUni = 0.5
-    BiUni = 0.2
-    UniBi = 0.2
+    UniUni = 0.6
+    BiUni = 0.15
+    UniBi = 0.15
     BiBI  = 0.1
     
 class RP11:
