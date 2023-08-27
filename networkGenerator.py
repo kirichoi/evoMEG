@@ -157,10 +157,10 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
     for i in range(len(realFloatingIdsInd)):
         s = np.argsort(np.count_nonzero(posprd, axis=1)[realFloatingIdsInd])[i]
         for j in prd_r_order:
-            if (rTypes[0,j] == ReactionType.UNIUNI) or (rTypes[0,j] == ReactionType.UNIBI):
+            if (rTypes[0,j] == ReactionType.UNIUNI) or (rTypes[0,j] == ReactionType.BIUNI):
                 rc_o1 = np.sum(stoi > 0, axis=0) > 0
                 posprd[:,rc_o1] = False
-            elif (rTypes[0,j] == ReactionType.BIUNI) or (rTypes[0,j] == ReactionType.BIBI):
+            elif (rTypes[0,j] == ReactionType.UNIBI) or (rTypes[0,j] == ReactionType.BIBI):
                 rc_o2 = np.sum(stoi > 0, axis=0) > 1
                 posprd[:,rc_o2] = False
         prd_idx = np.random.choice(r_range[posprd[s]])
