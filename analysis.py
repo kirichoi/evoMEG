@@ -211,7 +211,7 @@ def selectWithCutoff(model_top, dist_top, cutoff=0.1):
     return model_top[:coind], dist_top[:coind]
 
 
-def selectWithKernalDensity(dist_top):
+def selectWithKernalDensity(dist_top, bw=0.3):
     """
     Model selection rountine that returns a list of models based on the output
     of kernal density estimation.
@@ -229,7 +229,7 @@ def selectWithKernalDensity(dist_top):
     
     kde_xarr = x[:, np.newaxis]
     
-    kde = neighbors.KernelDensity(kernel='gaussian', bandwidth=0.3).fit(dist_top_reshape)
+    kde = neighbors.KernelDensity(kernel='gaussian', bandwidth=bw).fit(dist_top_reshape)
     
     log_dens = kde.score_samples(kde_xarr)
     
