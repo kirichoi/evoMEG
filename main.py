@@ -69,7 +69,7 @@ class SettingsClass:
         # When testing, check if the correst stoichiometry was recovered (default: True)
         self.checkCorrectStoichiometry = True
         # Prune unnecessary boundary species at the end (default: True)
-        self.prune = True
+        self.prune = False
         
         
         # Termination criterion settings ======================================
@@ -123,7 +123,7 @@ class SettingsClass:
         # Standard deviation of absolute noise
         self.ABS_NOISE_STD = 0.005
         # Standard deviation of relative noise
-        self.REL_NOISE_STD = 0.2
+        self.REL_NOISE_STD = 0.6
         
         
         # Plotting settings ===================================================
@@ -145,7 +145,7 @@ class SettingsClass:
         # Flag to save model components for caching
         self.EXPORT_CACHE = True
         # Path to save the output
-        self.EXPORT_PATH = './outputs/prune'
+        self.EXPORT_PATH = './outputs_noise/n0.6'
         # Overwrite the contents if the folder exists
         self.EXPORT_OVERWRITE = False
         # Create folders based on model names
@@ -271,6 +271,7 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
             norct = True
             alreadyexists = True
             dups = True
+            bn = True
             
             try:
                 r_idx = np.random.choice(nrList, p=np.divide(tempdiff, np.sum(tempdiff)))
@@ -301,13 +302,14 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
                 norct = any(np.sum(stt<0, axis=1) == 0)
                 alreadyexists = stt.tolist() in tracking
                 dups = len(check_duplicate_reaction(st)) > 0
+                bn = (~stt.any(axis=0)).any()
             except:
                 pass
             
             o += 1
                 
             if ((sttsum != 0 or sttrank != realNumFloating or
-                   norct or noprd or alreadyexists or dups) and (o < Settings.maxIter_mut)):
+                   norct or noprd or alreadyexists or dups or bn) and (o < Settings.maxIter_mut)):
                 mutate_condition = True
             else:
                 mutate_condition = False
@@ -423,9 +425,10 @@ def initialize(Settings):
         norct = True
         alreadyexists = True
         dups = True
+        bn = True
         
         while (sttsum != 0 or sttrank != realNumFloating or
-               norct or noprd or alreadyexists or dups):
+               norct or noprd or alreadyexists or dups or bn):
             try:
                 st, stt, rTypes, ia = ng.generateST(realSigns, realFloatingIdsInd, 
                                                     realBoundaryIdsInd, ns, nr)
@@ -435,6 +438,7 @@ def initialize(Settings):
                 norct = any(np.sum(stt<0, axis=1) == 0)
                 alreadyexists = stt.tolist() in tracking
                 dups = len(check_duplicate_reaction(st)) > 0
+                bn = (~stt.any(axis=0)).any()
             
                 numGen += 1
                 if int(numGen/1000) == (numGen/1000):
@@ -535,9 +539,10 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtypes,
         norct = True
         alreadyexists = True
         dups = True
+        bn = True
         
         while (sttsum != 0 or sttrank != realNumFloating or
-               norct or noprd or alreadyexists or dups) and (d < Settings.maxIter_gen):
+               norct or noprd or alreadyexists or dups or bn) and (d < Settings.maxIter_gen):
             try:
                 st, stt, rTypes, ia = ng.generateST(realSigns, realFloatingIdsInd, 
                                                     realBoundaryIdsInd, ns, nr)
@@ -547,6 +552,7 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtypes,
                 norct = any(np.sum(stt<0, axis=1) == 0)
                 alreadyexists = stt.tolist() in tracking
                 dups = len(check_duplicate_reaction(st)) > 0
+                bn = (~stt.any(axis=0)).any()
             except:
                 pass
             d += 1
@@ -673,6 +679,7 @@ if __name__ == '__main__':
 #%% Analyze True Model
     roadrunner.Logger.disableLogging()
     # roadrunner.Config.setValue(roadrunner.Config.ROADRUNNER_DISABLE_WARNINGS, 3)
+    np.seterr(divide='ignore')
     
     # Restore
     rr_nmval = roadrunner.Config.getValue(roadrunner.Config.PYTHON_ENABLE_NAMED_MATRIX)
