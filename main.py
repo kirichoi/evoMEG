@@ -112,6 +112,8 @@ class SettingsClass:
         
         # Reaction settings ===================================================
         # TODO: allow modification of probability
+        # Reaction kinetics - 'default', 'mass-action' (default: 'default')
+        self.kineticType = 'default'
         
         
         # RNG and noise settings ==============================================
@@ -288,7 +290,8 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
                 else:
                     stoi, rTyper, iar  = ng.generateSingleST(stoi, r_idx, realSigns, 
                                                              realFloatingIdsInd, 
-                                                             realBoundaryIdsInd, ns, nr)
+                                                             realBoundaryIdsInd, 
+                                                             ns, nr)
                     rtypes[0,r_idx] = rTyper
                     ia[:,r_idx] = iar
                     
@@ -323,7 +326,8 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
             eval_concCC[m] = mut_concCC[m]
         else:
             antStr = ng.generateAntimonyfromST(realFloatingIds, realBoundaryIds, 
-                                               stoi, rtypes, ia, boundary_init=realBoundaryVal)
+                                               stoi, rtypes, ia, Settings.kineticType,
+                                               boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
                 gpid = [x for x in r.getGlobalParameterIds() if not x.startswith('S')]
@@ -448,7 +452,8 @@ def initialize(Settings):
             except:
                 pass
         antStr = ng.generateAntimonyfromST(realFloatingIds, realBoundaryIds, 
-                                           st, rTypes, ia, boundary_init=realBoundaryVal)
+                                           st, rTypes, ia, Settings.kineticType,
+                                           boundary_init=realBoundaryVal)
         try:
             r = te.loada(antStr)
             gpid = [x for x in r.getGlobalParameterIds() if not x.startswith('S')]
@@ -566,7 +571,8 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtypes,
             rnd_concCC[l] = listconcCC[l]
         else:
             antStr = ng.generateAntimonyfromST(realFloatingIds, realBoundaryIds, 
-                                               st, rTypes, ia, boundary_init=realBoundaryVal)
+                                               st, rTypes, ia, Settings.kineticType,
+                                               boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
                 gpid = [x for x in r.getGlobalParameterIds() if not x.startswith('S')]
@@ -992,7 +998,8 @@ if __name__ == '__main__':
                             rTypes[0,k] = 0
                     
                 antStr = ng.generateAntimonyfromST(realFloatingIds, realBoundaryIds, 
-                                                   st, rTypes, ia, boundary_init=realBoundaryVal)
+                                                   st, rTypes, ia, Settings.kineticType,
+                                                   boundary_init=realBoundaryVal)
                 r = te.loada(antStr)
                 gpid = [x for x in r.getGlobalParameterIds() if not x.startswith('S')]
                 p_bound = ng.generateParameterBoundary(gpid)
@@ -1064,7 +1071,7 @@ if __name__ == '__main__':
             r = te.loada(ens_model[i])
             param = r.getGlobalParameterValues()
             newAnt = ng.generateAntimonyfromST(list(fid_dict.values()), list(bid_dict.values()),
-                                               j, ens_rtypes[i], ens_ia[i],
+                                               j, ens_rtypes[i], ens_ia[i], Settings.kineticType,
                                                boundary_init=realBoundaryVal)
             # TODO: remove
             r = te.loada(newAnt)

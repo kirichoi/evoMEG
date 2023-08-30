@@ -708,7 +708,7 @@ def generateRateLaw(rl, floatingIds, boundaryIds, rlt, Jind):
     return rateLaw, Klist
 
 
-def generateSimpleRateLawStoich(regTypes, revTypes, Jind, rct, prd, ia, real):
+def generateDefaultKinetics(regTypes, revTypes, Jind, rct, prd, ia, real):
     """
     Build a rate law for a reaction
     """
@@ -776,7 +776,60 @@ def generateSimpleRateLawStoich(regTypes, revTypes, Jind, rct, prd, ia, real):
     return rateLaw, Klist
 
 
-def generateAntimonyfromST(realFloatingIds, realBoundaryIds, st, rType, ia, boundary_init=None):
+def generateMassActionKinetics(regTypes, revTypes, Jind, rct, prd, ia, real):
+    """
+    Build a rate law for a reaction
+    """
+        
+    Klist = []
+    
+    T = ''
+    ACT = ''
+    INH = ''
+    
+    # T
+    T = T + '(Kf{}*'.format(Jind)
+    Klist.append('Kf{}'.format(Jind))
+    
+    for i,j in enumerate(rct):
+        T = T + '{}'.format(j)
+        if i < len(rct) - 1:
+            T = T + '*'
+    
+    if revTypes == Reversibility.REVERSIBLE:
+        T = T + ' - Kr{}*'.format(Jind)
+        Klist.append('Kr{}'.format(Jind))
+        
+        for i,j in enumerate(prd):
+            T = T + '{}'.format(j)
+            if i < len(prd) - 1:
+                T = T + '*'
+            
+    T = T + ')'
+        
+    # Activation
+    if regTypes == RegulationType.ACTIVATION:
+        act = real[ia<0]
+        for i,j in enumerate(act):
+            ACT = ACT + '(1 + Ka{}{}*'.format(Jind, i)
+            Klist.append('Ka{}{}*'.format(Jind, i))
+            ACT = ACT + '{})*'.format(j)
+            
+    # Inhibition
+    if regTypes == RegulationType.INHIBITION:
+        inh = real[ia>0]
+        for i,j in enumerate(inh):
+            INH = INH + '(1/(1 + Ki{}{}*'.format(Jind, i)
+            Klist.append('Ki{}{}*'.format(Jind, i))
+            INH = INH + '{}))*'.format(j)
+    
+    rateLaw = '{}{}{}'.format(ACT, INH, T)
+        
+    return rateLaw, Klist
+
+
+def generateAntimonyfromST(realFloatingIds, realBoundaryIds, st, rType, ia, 
+                           kineticType, boundary_init=None):
     """
     Convert stoichiometry to antimony string
     """
@@ -804,8 +857,12 @@ def generateAntimonyfromST(realFloatingIds, realBoundaryIds, st, rType, ia, boun
         if rType[0][index] == ReactionType.UNIUNI:
             # UniUni
             antStr = antStr + 'J{}: {} -> {}; '.format(index, rct[0], prd[0])
-            RateLaw, klist_i = generateSimpleRateLawStoich(rType[1][index], rType[2][index], 
+            if kineticType == 'default':
+                RateLaw, klist_i = generateDefaultKinetics(rType[1][index], rType[2][index], 
                                                            index, rct, prd, ia, real)
+            elif kineticType == 'mass-action':
+                RateLaw, klist_i = generateMassActionKinetics(rType[1][index], rType[2][index], 
+                                                              index, rct, prd, ia, real)
             antStr = antStr + RateLaw
             Klist.append(klist_i)
         elif rType[0][index] == ReactionType.BIUNI:
@@ -813,8 +870,12 @@ def generateAntimonyfromST(realFloatingIds, realBoundaryIds, st, rType, ia, boun
             if len(rct) == 1:
                 rct = np.repeat(rct, 2)
             antStr = antStr + 'J{}: {} + {} -> {}; '.format(index, rct[0], rct[1], prd[0])
-            RateLaw, klist_i = generateSimpleRateLawStoich(rType[1][index], rType[2][index], 
+            if kineticType == 'default':
+                RateLaw, klist_i = generateDefaultKinetics(rType[1][index], rType[2][index], 
                                                            index, rct, prd, ia, real)
+            elif kineticType == 'mass-action':
+                RateLaw, klist_i = generateMassActionKinetics(rType[1][index], rType[2][index], 
+                                                              index, rct, prd, ia, real)
             antStr = antStr + RateLaw
             Klist.append(klist_i)
         elif rType[0][index] == ReactionType.UNIBI:
@@ -822,8 +883,12 @@ def generateAntimonyfromST(realFloatingIds, realBoundaryIds, st, rType, ia, boun
             if len(prd) == 1:
                 prd = np.repeat(prd, 2)
             antStr = antStr + 'J{}: {} -> {} + {}; '.format(index, rct[0], prd[0], prd[1])
-            RateLaw, klist_i = generateSimpleRateLawStoich(rType[1][index], rType[2][index], 
+            if kineticType == 'default':
+                RateLaw, klist_i = generateDefaultKinetics(rType[1][index], rType[2][index], 
                                                            index, rct, prd, ia, real)
+            elif kineticType == 'mass-action':
+                RateLaw, klist_i = generateMassActionKinetics(rType[1][index], rType[2][index], 
+                                                              index, rct, prd, ia, real)
             antStr = antStr + RateLaw
             Klist.append(klist_i)
         else:
@@ -834,8 +899,12 @@ def generateAntimonyfromST(realFloatingIds, realBoundaryIds, st, rType, ia, boun
                 prd = np.repeat(prd, 2)
             antStr = antStr + 'J{}: {} + {} -> {} + {}; '.format(index, rct[0], 
                                                                     rct[1], prd[0], prd[1])
-            RateLaw, klist_i = generateSimpleRateLawStoich(rType[1][index], rType[0][index], 
+            if kineticType == 'default':
+                RateLaw, klist_i = generateDefaultKinetics(rType[1][index], rType[0][index], 
                                                            index, rct, prd, ia, real)
+            elif kineticType == 'mass-action':
+                RateLaw, klist_i = generateMassActionKinetics(rType[1][index], rType[0][index], 
+                                                              index, rct, prd, ia, real)
             antStr = antStr + RateLaw
             Klist.append(klist_i)
         antStr = antStr + ';\n'

@@ -101,6 +101,8 @@ def validateSettings(Settings):
     assert(isinstance(Settings.refine, bool)), 'Invalid refine'
     assert(isinstance(Settings.refineTol, (int, float))), 'Invalid refineTol'
     
+    assert(Settings.kineticType=='default' or Settings.kineticType=='mass-action'), 'Invalid kineticType'
+    
     assert(isinstance(Settings.r_seed, int)), 'Invalid r_seed'
     assert(isinstance(Settings.NOISE, bool)), 'Invalid NOISE'
     assert(isinstance(Settings.ABS_NOISE_STD, (int, float))), 'Invalid ABS_NOISE_STD'
@@ -158,6 +160,7 @@ def exportSettings(Settings, path=None):
     outputtxt.writelines('optiPolish: {}'.format(Settings.optiPolish) + '\n')
     outputtxt.writelines('refine: {}'.format(Settings.refine) + '\n')
     outputtxt.writelines('refineTol: {}'.format(Settings.refineTol) + '\n')
+    outputtxt.writelines('kineticType: {}'.format(Settings.kineticType) + '\n')
     outputtxt.writelines('r_seed: {}'.format(Settings.r_seed) + '\n')
     outputtxt.writelines('NOISE: {}'.format(Settings.NOISE) + '\n')
     outputtxt.writelines('ABS_NOISE_STD: {}'.format(Settings.ABS_NOISE_STD) + '\n')
