@@ -139,14 +139,16 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
     prdprob = np.zeros((ns, nr), dtype=int)
     
     for i in range(nr):
-        rsz = signs[:,i] == 0
-        rso = signs[:,i] < 0
-        psz = signs[:,i] == 0
-        pso = signs[:,i] > 0
-        rctprob[realFloatingIdsInd[rsz],i] = 1
-        rctprob[realFloatingIdsInd[rso],i] = 2
-        prdprob[realFloatingIdsInd[psz],i] = 1
-        prdprob[realFloatingIdsInd[pso],i] = 2
+        zz = signs[:,i] == 0
+        rr = signs[:,i] < 0
+        pp = signs[:,i] > 0
+        
+        rctprob[realFloatingIdsInd[pp],i] = 1
+        rctprob[realFloatingIdsInd[zz],i] = 2
+        rctprob[realFloatingIdsInd[rr],i] = 3
+        prdprob[realFloatingIdsInd[rr],i] = 1
+        prdprob[realFloatingIdsInd[zz],i] = 2
+        prdprob[realFloatingIdsInd[pp],i] = 3
     
     rct_r_order = np.argsort(np.count_nonzero(signs<=0, axis=0)[realFloatingIdsInd])
     
@@ -462,14 +464,16 @@ def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd,
     rctprob = np.zeros(nr, dtype=int)
     prdprob = np.zeros(nr, dtype=int)
     
-    rsz = signs[:,r_idx] == 0
-    rso = signs[:,r_idx] < 0
-    psz = signs[:,r_idx] == 0
-    pso = signs[:,r_idx] > 0
-    rctprob[realFloatingIdsInd[rsz],r_idx] = 1
-    rctprob[realFloatingIdsInd[rso],r_idx] = 2
-    prdprob[realFloatingIdsInd[psz],r_idx] = 1
-    prdprob[realFloatingIdsInd[pso],r_idx] = 2
+    zz = signs[:,r_idx] == 0
+    rr = signs[:,r_idx] < 0
+    pp = signs[:,r_idx] > 0
+    
+    rctprob[realFloatingIdsInd[pp],r_idx] = 1
+    rctprob[realFloatingIdsInd[zz],r_idx] = 2
+    rctprob[realFloatingIdsInd[rr],r_idx] = 3
+    prdprob[realFloatingIdsInd[rr],r_idx] = 1
+    prdprob[realFloatingIdsInd[zz],r_idx] = 2
+    prdprob[realFloatingIdsInd[pp],r_idx] = 3
     
     rsum = np.sum(stoi[:,r_idx] < 0)
     psum = np.sum(stoi[:,r_idx] > 0)
