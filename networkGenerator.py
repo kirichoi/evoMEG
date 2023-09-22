@@ -69,8 +69,8 @@ class RLP:
     Inhibactiv = 0#0.05
     
 class REVP:
-    Irreversible = 0.7
-    Reversible = 0.3
+    Irreversible = 1.0
+    Reversible = 0.0
 
 
 def pickReactionType(RP):
@@ -117,7 +117,13 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
     ia = np.zeros((ns, nr), dtype=int)
     
     r_range = np.arange(nr)
-    r_order = np.argsort(np.count_nonzero(signs, axis=0))
+    r_allprd = np.all(signs > 0, axis=0)
+    r_allrct = np.all(signs < 0, axis=0)
+    r_oner = np.count_nonzero(signs, axis=0) == 1
+    r_else = np.logical_not(np.logical_or(np.logical_or(r_allprd, r_allrct), r_oner))
+    # r_order = r_range#np.argsort(np.count_nonzero(signs, axis=0))
+    r_order = np.concatenate((r_range[r_allprd], r_range[r_allrct], r_range[r_oner],
+                              r_range[r_else]))
     
     allposrct = np.ones((ns, nr), dtype=bool)
     allposrct[realFloatingIdsInd] = signs<=0
@@ -135,66 +141,63 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
         rTypes[1,r_idx] = regType
         rTypes[2,r_idx] = revType
     
-    rctprob = np.zeros((ns, nr), dtype=int)
-    prdprob = np.zeros((ns, nr), dtype=int)
+    rctprob = np.zeros((ns, nr), dtype=float)
+    prdprob = np.zeros((ns, nr), dtype=float)
     
     for i in range(nr):
         zz = signs[:,i] == 0
         rr = signs[:,i] < 0
         pp = signs[:,i] > 0
+
+        rctprob[realFloatingIdsInd[pp],i] = 1/np.sum(pp)
+        rctprob[realFloatingIdsInd[zz],i] = 2*len(realFloatingIdsInd)/np.sum(zz)
+        rctprob[realFloatingIdsInd[rr],i] = 4*len(realFloatingIdsInd)/np.sum(rr)
+        prdprob[realFloatingIdsInd[rr],i] = 1/np.sum(rr)
+        prdprob[realFloatingIdsInd[zz],i] = 2*len(realFloatingIdsInd)/np.sum(zz)
+        prdprob[realFloatingIdsInd[pp],i] = 4*len(realFloatingIdsInd)/np.sum(pp)
         
-        rctprob[realFloatingIdsInd[pp],i] = 1
-        rctprob[realFloatingIdsInd[zz],i] = 2
-        rctprob[realFloatingIdsInd[rr],i] = 3
-        prdprob[realFloatingIdsInd[rr],i] = 1
-        prdprob[realFloatingIdsInd[zz],i] = 2
-        prdprob[realFloatingIdsInd[pp],i] = 3
-    
-    rct_r_order = np.argsort(np.count_nonzero(signs<=0, axis=0)[realFloatingIdsInd])
+        if np.sum(pp) == 0:
+            prdprob[realBoundaryIdsInd,i] = 4*len(realBoundaryIdsInd)
+        if np.sum(rr) == 0:
+            rctprob[realBoundaryIdsInd,i] = 4*len(realBoundaryIdsInd)
     
     for i in range(len(realFloatingIdsInd)):
-        s = np.argsort(np.count_nonzero(posrct, axis=1)[realFloatingIdsInd])[i]
-        for j in rct_r_order:
-            if (rTypes[0,j] == ReactionType.UNIUNI) or (rTypes[0,j] == ReactionType.UNIBI):
-                rc_o1 = np.sum(stoi < 0, axis=0) > 0
-                posrct[:,rc_o1] = False
-            elif (rTypes[0,j] == ReactionType.BIUNI) or (rTypes[0,j] == ReactionType.BIBI):
-                rc_o2 = np.sum(stoi < 0, axis=0) > 1
-                posrct[:,rc_o2] = False
-        rp = rctprob[i,posrct[s]]
-        rct_idx = np.random.choice(r_range[posrct[s]], p=rp/np.sum(rp))
-        stoi[s,rct_idx] -= 1
-        posrct[s,rct_idx] = False
-        posprd[s,rct_idx] = False
-        allposprd[s,rct_idx] = False
-    
-    prd_r_order = np.argsort(np.count_nonzero(signs>=0, axis=0)[realFloatingIdsInd])
-    
-    for i in range(len(realFloatingIdsInd)):
-        s = np.argsort(np.count_nonzero(posprd, axis=1)[realFloatingIdsInd])[i]
-        for j in prd_r_order:
+        s2 = np.argsort(np.count_nonzero(posprd, axis=1)[realFloatingIdsInd])[i]
+        for j in r_order:
             if (rTypes[0,j] == ReactionType.UNIUNI) or (rTypes[0,j] == ReactionType.BIUNI):
                 rc_o1 = np.sum(stoi > 0, axis=0) > 0
                 posprd[:,rc_o1] = False
             elif (rTypes[0,j] == ReactionType.UNIBI) or (rTypes[0,j] == ReactionType.BIBI):
                 rc_o2 = np.sum(stoi > 0, axis=0) > 1
                 posprd[:,rc_o2] = False
-        pp = prdprob[i,posprd[s]]
-        prd_idx = np.random.choice(r_range[posprd[s]], p=pp/np.sum(pp))
-        stoi[s,prd_idx] += 1
-        posrct[s,prd_idx] = False
-        allposrct[s,prd_idx] = False
-        posprd[s,prd_idx] = False
+        pp = prdprob[s2,posprd[s2]]
+        prd_idx = np.random.choice(r_range[posprd[s2]], p=pp/np.sum(pp))
+        stoi[s2,prd_idx] += 1
+        posrct[s2,prd_idx] = False
+        allposrct[s2,prd_idx] = False
+        posprd[s2,prd_idx] = False
+        
+        s1 = np.argsort(np.count_nonzero(posrct, axis=1)[realFloatingIdsInd])[i]
+        for j in r_order:
+            if (rTypes[0,j] == ReactionType.UNIUNI) or (rTypes[0,j] == ReactionType.UNIBI):
+                rc_o1 = np.sum(stoi < 0, axis=0) > 0
+                posrct[:,rc_o1] = False
+            elif (rTypes[0,j] == ReactionType.BIUNI) or (rTypes[0,j] == ReactionType.BIBI):
+                rc_o2 = np.sum(stoi < 0, axis=0) > 1
+                posrct[:,rc_o2] = False
+        rp = rctprob[s1,posrct[s1]]
+        rct_idx = np.random.choice(r_range[posrct[s1]], p=rp/np.sum(rp))
+        stoi[s1,rct_idx] -= 1
+        posrct[s1,rct_idx] = False
+        posprd[s1,rct_idx] = False
+        allposprd[s1,rct_idx] = False
     
-    brn5 = np.sum(signs<0, axis=0) == len(realFloatingIdsInd)
-    bpn5 = np.sum(signs>0, axis=0) == len(realFloatingIdsInd)
-    
-    if any(brn5):
-        allposrct[realBoundaryIdsInd,r_range[brn5][:,np.newaxis]] = False
-        posrct[realBoundaryIdsInd,r_range[brn5][:,np.newaxis]] = False
-    if any(bpn5):
-        allposprd[realBoundaryIdsInd,r_range[bpn5][:,np.newaxis]] = False
-        posprd[realBoundaryIdsInd,r_range[bpn5][:,np.newaxis]] = False
+    if any(r_allprd):
+        allposprd[realBoundaryIdsInd,r_range[r_allprd][:,np.newaxis]] = False
+        posprd[realBoundaryIdsInd,r_range[r_allprd][:,np.newaxis]] = False
+    if any(r_allrct):
+        allposrct[realBoundaryIdsInd,r_range[r_allrct][:,np.newaxis]] = False
+        posrct[realBoundaryIdsInd,r_range[r_allrct][:,np.newaxis]] = False
     
     for i, r_idx in enumerate(r_order):
         if rTypes[0,r_idx] == ReactionType.UNIUNI:
@@ -270,7 +273,7 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
                 posRctProb = np.empty(len(posRctInd))
                 posRctProb[:c1] = rctprob[realFloatingIdsInd,r_idx][rcts]
                 if c2 != 0:
-                    posRctProb[c1:] = 1/c2
+                    posRctProb[c1:] = 4*len(realBoundaryIdsInd)
                 posRctProb = posRctProb/np.sum(posRctProb)
                 rct_id = np.random.choice(posRctInd, p=posRctProb)
                 stoi[rct_id,r_idx] -= 1
@@ -291,7 +294,7 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
                 posPrdProb = np.empty(len(posPrdInd))
                 posPrdProb[:c1] = prdprob[realFloatingIdsInd,r_idx][prds]
                 if c2 != 0:
-                    posPrdProb[c1:] = 1/c2
+                    posPrdProb[c1:] = 4*len(realBoundaryIdsInd)
                 posPrdProb = posPrdProb/np.sum(posPrdProb)
                 prd_id = np.random.choice(posPrdInd, p=posPrdProb)
                 stoi[prd_id,r_idx] += 1
@@ -313,7 +316,7 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
                 posRctProb = np.empty(len(posRctInd))
                 posRctProb[:c1] = rctprob[realFloatingIdsInd,r_idx][rcts]
                 if c2 != 0:
-                    posRctProb[c1:] = 1/c2
+                    posRctProb[c1:] = 4*len(realBoundaryIdsInd)
                 posRctProb = posRctProb/np.sum(posRctProb)
                 rct_id = np.random.choice(posRctInd, size=2-rsum, p=posRctProb)
                 for rr in rct_id:
@@ -336,7 +339,7 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
                 posPrdProb = np.empty(len(posPrdInd))
                 posPrdProb[:c1] = prdprob[realFloatingIdsInd,r_idx][prds]
                 if c2 != 0:
-                    posPrdProb[c1:] = 1/c2
+                    posPrdProb[c1:] = 4*len(realBoundaryIdsInd)
                 posPrdProb = posPrdProb/np.sum(posPrdProb)
                 prd_id = np.random.choice(posPrdInd, p=posPrdProb)
                 stoi[prd_id,r_idx] += 1
@@ -358,7 +361,7 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
                 posRctProb = np.empty(len(posRctInd))
                 posRctProb[:c1] = rctprob[realFloatingIdsInd,r_idx][rcts]
                 if c2 != 0:
-                    posRctProb[c1:] = 1/c2
+                    posRctProb[c1:] = 4*len(realBoundaryIdsInd)
                 posRctProb = posRctProb/np.sum(posRctProb)
                 rct_id = np.random.choice(posRctInd, p=posRctProb)
                 stoi[rct_id,r_idx] -= 1
@@ -379,7 +382,7 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
                 posPrdProb = np.empty(len(posPrdInd))
                 posPrdProb[:c1] = prdprob[realFloatingIdsInd,r_idx][prds]
                 if c2 != 0:
-                    posPrdProb[c1:] = 1/c2
+                    posPrdProb[c1:] = 4*len(realBoundaryIdsInd)
                 posPrdProb = posPrdProb/np.sum(posPrdProb)
                 prd_id = np.random.choice(posPrdInd, size=2-psum, p=posPrdProb)
                 for pp in prd_id:
@@ -402,7 +405,7 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
                 posRctProb = np.empty(len(posRctInd))
                 posRctProb[:c1] = rctprob[realFloatingIdsInd,r_idx][rcts]
                 if c2 != 0:
-                    posRctProb[c1:] = 1/c2
+                    posRctProb[c1:] = 4*len(realBoundaryIdsInd)
                 posRctProb = posRctProb/np.sum(posRctProb)
                 rct_id = np.random.choice(posRctInd, size=2-rsum, p=posRctProb)
                 for rr in rct_id:
@@ -424,7 +427,7 @@ def generateST(signs, realFloatingIdsInd, realBoundaryIdsInd, ns, nr):
                 posPrdProb = np.empty(len(posPrdInd))
                 posPrdProb[:c1] = prdprob[realFloatingIdsInd,r_idx][prds]
                 if c2 != 0:
-                    posPrdProb[c1:] = 1/c2
+                    posPrdProb[c1:] = 4*len(realBoundaryIdsInd)
                 posPrdProb = posPrdProb/np.sum(posPrdProb)
                 prd_id = np.random.choice(posPrdInd, size=2-psum, p=posPrdProb)
                 for pp in prd_id:
@@ -468,12 +471,17 @@ def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd,
     rr = signs[:,r_idx] < 0
     pp = signs[:,r_idx] > 0
     
-    rctprob[realFloatingIdsInd[pp],r_idx] = 1
-    rctprob[realFloatingIdsInd[zz],r_idx] = 2
-    rctprob[realFloatingIdsInd[rr],r_idx] = 3
-    prdprob[realFloatingIdsInd[rr],r_idx] = 1
-    prdprob[realFloatingIdsInd[zz],r_idx] = 2
-    prdprob[realFloatingIdsInd[pp],r_idx] = 3
+    rctprob[realFloatingIdsInd[pp],r_idx] = 1/np.sum(pp)
+    rctprob[realFloatingIdsInd[zz],r_idx] = 2*len(realFloatingIdsInd)/np.sum(zz)
+    rctprob[realFloatingIdsInd[rr],r_idx] = 4*len(realFloatingIdsInd)/np.sum(rr)
+    prdprob[realFloatingIdsInd[rr],r_idx] = 1/np.sum(rr)
+    prdprob[realFloatingIdsInd[zz],r_idx] = 2*len(realFloatingIdsInd)/np.sum(zz)
+    prdprob[realFloatingIdsInd[pp],r_idx] = 4*len(realFloatingIdsInd)/np.sum(pp)
+    
+    if np.sum(pp) == 0:
+        prdprob[realBoundaryIdsInd,r_idx] = 4*len(realBoundaryIdsInd)
+    if np.sum(rr) == 0:
+        rctprob[realBoundaryIdsInd,r_idx] = 4*len(realBoundaryIdsInd)
     
     rsum = np.sum(stoi[:,r_idx] < 0)
     psum = np.sum(stoi[:,r_idx] > 0)
@@ -508,13 +516,13 @@ def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd,
         if np.count_nonzero(stoi[:,r_idx]>0) > 1:
             posprd[:,r_idx] = False
     
-    brn5 = np.sum(signs<0, axis=0) == len(realFloatingIdsInd)
-    bpn5 = np.sum(signs>0, axis=0) == len(realFloatingIdsInd)
+    r_allprd = np.all(signs > 0, axis=0)
+    r_allrct = np.all(signs < 0, axis=0)
     
-    if any(brn5):
-        posrct[realBoundaryIdsInd,r_range[brn5][:,np.newaxis]] = False
-    if any(bpn5):
-        posprd[realBoundaryIdsInd,r_range[bpn5][:,np.newaxis]] = False
+    if any(r_allrct):
+        posrct[realBoundaryIdsInd,r_range[r_allrct][:,np.newaxis]] = False
+    if any(r_allprd):
+        posprd[realBoundaryIdsInd,r_range[r_allprd][:,np.newaxis]] = False
     
     if rTyper == ReactionType.UNIUNI:
         if rsum == 0:
@@ -531,7 +539,7 @@ def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd,
             posRctProb = np.empty(len(posRctInd))
             posRctProb[:c1] = rctprob[realFloatingIdsInd,r_idx][rcts]
             if c2 != 0:
-                posRctProb[c1:] = 1/c2
+                posRctProb[c1:] = 4*len(realBoundaryIdsInd)
             posRctProb = posRctProb/np.sum(posRctProb)
             rct_id = np.random.choice(posRctInd, p=posRctProb)
             stoi[rct_id,r_idx] -= 1
@@ -551,7 +559,7 @@ def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd,
             posPrdProb = np.empty(len(posPrdInd))
             posPrdProb[:c1] = prdprob[realFloatingIdsInd,r_idx][prds]
             if c2 != 0:
-                posPrdProb[c1:] = 1/c2
+                posPrdProb[c1:] = 4*len(realBoundaryIdsInd)
             posPrdProb = posPrdProb/np.sum(posPrdProb)
             prd_id = np.random.choice(posPrdInd, p=posPrdProb)
             stoi[prd_id,r_idx] += 1
@@ -572,7 +580,7 @@ def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd,
             posRctProb = np.empty(len(posRctInd))
             posRctProb[:c1] = rctprob[realFloatingIdsInd,r_idx][rcts]
             if c2 != 0:
-                posRctProb[c1:] = 1/c2
+                posRctProb[c1:] = 4*len(realBoundaryIdsInd)
             posRctProb = posRctProb/np.sum(posRctProb)
             rct_id = np.random.choice(posRctInd, size=2-rsum, p=posRctProb)
             for rr in rct_id:
@@ -593,7 +601,7 @@ def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd,
             posPrdProb = np.empty(len(posPrdInd))
             posPrdProb[:c1] = prdprob[realFloatingIdsInd,r_idx][prds]
             if c2 != 0:
-                posPrdProb[c1:] = 1/c2
+                posPrdProb[c1:] = 4*len(realBoundaryIdsInd)
             posPrdProb = posPrdProb/np.sum(posPrdProb)
             prd_id = np.random.choice(posPrdInd, p=posPrdProb)
             stoi[prd_id,r_idx] += 1
@@ -614,7 +622,7 @@ def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd,
             posRctProb = np.empty(len(posRctInd))
             posRctProb[:c1] = rctprob[realFloatingIdsInd,r_idx][rcts]
             if c2 != 0:
-                posRctProb[c1:] = 1/c2
+                posRctProb[c1:] = 4*len(realBoundaryIdsInd)
             posRctProb = posRctProb/np.sum(posRctProb)
             rct_id = np.random.choice(posRctInd, p=posRctProb)
             stoi[rct_id,r_idx] -= 1
@@ -634,7 +642,7 @@ def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd,
             posPrdProb = np.empty(len(posPrdInd))
             posPrdProb[:c1] = prdprob[realFloatingIdsInd,r_idx][prds]
             if c2 != 0:
-                posPrdProb[c1:] = 1/c2
+                posPrdProb[c1:] = 4*len(realBoundaryIdsInd)
             posPrdProb = posPrdProb/np.sum(posPrdProb)
             prd_id = np.random.choice(posPrdInd, size=2-psum, p=posPrdProb)
             for pp in prd_id:
@@ -656,7 +664,7 @@ def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd,
             posRctProb = np.empty(len(posRctInd))
             posRctProb[:c1] = rctprob[realFloatingIdsInd,r_idx][rcts]
             if c2 != 0:
-                posRctProb[c1:] = 1/c2
+                posRctProb[c1:] = 4*len(realBoundaryIdsInd)
             posRctProb = posRctProb/np.sum(posRctProb)
             rct_id = np.random.choice(posRctInd, size=2-rsum, p=posRctProb)
             for rr in rct_id:
@@ -677,7 +685,7 @@ def generateSingleST(stoi, r_idx, signs, realFloatingIdsInd, realBoundaryIdsInd,
             posPrdProb = np.empty(len(posPrdInd))
             posPrdProb[:c1] = prdprob[realFloatingIdsInd,r_idx][prds]
             if c2 != 0:
-                posPrdProb[c1:] = 1/c2
+                posPrdProb[c1:] = 4*len(realBoundaryIdsInd)
             posPrdProb = posPrdProb/np.sum(posPrdProb)
             prd_id = np.random.choice(posPrdInd, size=2-psum, p=posPrdProb)
             for pp in prd_id:
