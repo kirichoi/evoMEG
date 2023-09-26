@@ -15,9 +15,9 @@ import networkGenerator as ng
 import plotting as pt
 import ioutils
 import analysis
-# import matplotlib.pyplot as plt
 import time
 import copy
+import warnings
 
 #np.seterr(all='raise')
 
@@ -29,10 +29,13 @@ class SettingsClass:
         
         # Path to a custom model (default: None)
         self.MODEL_INPUT = None
-        # Path to experimental data - not implemented (default: None)
+        #TODO Path to experimental data - not implemented (default: None)
         self.DATA_INPUT = None
         # Path to preconfigured settings (default: None)
         self.READ_SETTINGS = None
+        # Path to a previous output (default: None)
+        self.CACHED_DIR = None
+        
         
         # Test models =========================================================
         # A selection of test models including (reversible/irreverisble) 
@@ -48,28 +51,32 @@ class SettingsClass:
         # Settings for the population and the algorithm
         
         # Size of output ensemble
-        self.ens_size = 10
-        # Number of models passed to next generation w/o mutation (default: int(ens_size/10))
+        self.ens_size = 50
+        # Number of models used for recombination (default: int(0.1*ens_size))
         self.pass_size = int(self.ens_size/10)
-        # Number of mutated models (default: int(ens_size/2))
-        self.mut_size = int(self.ens_size/2)
         # Top percentage of population to track (default: 0.05)
-        self.top_p = 0.05
-        # Maximum iteration allowed for random generation (default: 100)
-        self.maxIter_gen = 100
-        # Maximum iteration allowed for mutation (default: 100)
-        self.maxIter_mut = 100
+        self.top_p = 0.1
+        # Maximum iteration allowed for initialization (default: 10000)
+        self.maxIter_init = 10000
+        # Maximum iteration allowed for random generation (default: 200)
+        self.maxIter_gen = 200
+        # Maximum iteration allowed for mutation (default: 200)
+        self.maxIter_mut = 200
         # Recombination probability (default: 0.3)
         self.recomb = 0.3
         # Set conserved moiety (default: False)
         self.conservedMoiety = False
+        # When testing, check if the correst stoichiometry was recovered (default: True)
+        self.checkCorrectStoichiometry = True
+        # Prune unnecessary boundary species at the end (default: True)
+        self.prune = False
         
         
         # Termination criterion settings ======================================
         # Settings to control termination criterion
         
         # Maximum number of generations
-        self.n_gen = 5
+        self.n_gen = 50
         # Number of generations w/o improvement
         self.gen_static = None
         # Threshold average distance
@@ -80,6 +87,9 @@ class SettingsClass:
         self.thres_shortest = None
         # Threshold top p-percent smallest distance
         self.thres_top = None
+        # Maximum run time allowed in minutes
+        self.max_run_time = None
+        
         
         # Optimizer settings ==================================================
         # Settings specific to differential evolution
@@ -88,35 +98,45 @@ class SettingsClass:
         self.optiMaxIter = 1000
         # Optimizer tolerance (default: 1)
         self.optiTol = 1.
-        # Run additional optimization at the end for polishing (default: False)
+        # Allow polishing parameters for optimizer (default: False)
         self.optiPolish = False
+        # Run optimization at the end for better fitness representation (default: False)
+        self.refine = False
+        # Tolerance for additional optimization at the end (default: 0.01)
+        self.refineTol = 0.01
         # Weight for control coefficients when calculating the distance - unused
         self.w1 = 16
         # Weight for steady-state and flux when calculating the distance - unused
         self.w2 = 1.0
         
         
-        # Randomization settings ==============================================
+        # Reaction settings ===================================================
+        # TODO: allow modification of probability
+        # Reaction kinetics - 'default', 'mass-action' (default: 'default')
+        self.kineticType = 'default'
         
-        # Random seed
+        
+        # RNG and noise settings ==============================================
+        
+        # Seed
         self.r_seed = 123123
         # Flag to add Gaussian noise to the input
         self.NOISE = False
         # Standard deviation of absolute noise
         self.ABS_NOISE_STD = 0.005
         # Standard deviation of relative noise
-        self.REL_NOISE_STD = 0.2
+        self.REL_NOISE_STD = 0.6
         
         
         # Plotting settings ===================================================
         
-        # Flag to plot
+        # Flag to visualize plot
         self.SHOW_PLOT = True
-        # Flag to save plot
+        # Flag to save figures
         self.SAVE_PLOT = True
         
         
-        # Data settings =======================================================
+        # Export settings =====================================================
             
         # Flag to collect all models in the ensemble
         self.EXPORT_ALL_MODELS = True
@@ -124,48 +144,18 @@ class SettingsClass:
         self.EXPORT_OUTPUT = True
         # Flag to save current settings
         self.EXPORT_SETTINGS = True
+        # Flag to save model components for caching
+        self.EXPORT_CACHE = True
         # Path to save the output
-        self.EXPORT_PATH = './outputs_new/test'
+        self.EXPORT_PATH = './outputs_noise/n0.6'
+        # Overwrite the contents if the folder exists
+        self.EXPORT_OVERWRITE = False
+        # Create folders based on model names
+        self.EXPORT_FORCE_MODELNAMES = False
+        
         
         # Flag to run the algorithm - temporary
         self.RUN = False
-
-
-def customGetScaledConcentrationControlCoefficientMatrix(r):
-    '''
-    Numpy implementation of GetScaledConcentrationControlCoefficientMatrix()
-    that does not force run steadyState()
-    
-    Parameters
-    ----------
-    r : roadrunner.RoadRunner()
-        roadrunner instance.
-
-    Returns
-    -------
-    T4 : numpy.ndarray
-        Scale concentration control coefficient matrix.
-
-    '''
-    
-    re = r.simulate(0, 10000, 5)
-    r.steadyState()
-    uelast = r.getUnscaledElasticityMatrix()
-    Nr = r.getNrMatrix()
-    T1 = np.dot(Nr, uelast)
-    LinkMatrix = r.getLinkMatrix()
-    Jac = np.dot(T1, LinkMatrix)
-    T2 = Jac * (-1.0)
-    Inv = np.linalg.inv(T2)
-    T3 = np.dot(Inv, Nr)
-    T4 = np.dot(LinkMatrix, T3)
-
-    a = np.tile(r.getReactionRates(), (np.shape(T4)[0], 1))
-    b = np.tile(r.getFloatingSpeciesConcentrations(), (np.shape(T4)[1], 1)).T
-    
-    T4 = np.multiply(T4, np.divide(a, b))
-    
-    return T4
 
 
 def check_duplicate_reaction(data):
@@ -204,12 +194,10 @@ def f1(k_list, *args):
         if np.isnan(objCCC).any():
             dist_obj = 1e6
         else:
-            objCCC[np.abs(objCCC) < 1e-8] = 0 # Set small values to zero
+            objCCC[np.abs(objCCC) < 1e-7] = 0 # Set small values to zero
             
-            objCCC_row = args[0].getFloatingSpeciesIds()
-            objCCC_col = args[0].getReactionIds()
-            objCCC = objCCC[np.argsort(objCCC_row)]
-            objCCC = objCCC[:,np.argsort(objCCC_col)]
+            if args[0].conservedMoietyAnalysis:
+                objCCC = objCCC[np.argsort(args[0].getFloatingSpeciesIds())]
             
             dist_obj = ((np.linalg.norm(realConcCC - objCCC))*(1 + np.sum(np.not_equal(np.sign(realConcCC), np.sign(objCCC)))))
     except:
@@ -221,7 +209,7 @@ def f1(k_list, *args):
     return dist_obj
 
 
-def updateTC(n, dists, Settings):
+def updateTC(n, runtime, dists, Settings):
     terminate = False
     
     if (Settings.n_gen != None) and (n >= Settings.n_gen):
@@ -237,6 +225,8 @@ def updateTC(n, dists, Settings):
         terminate = True
     if (Settings.thres_top != None) and (dists[3][-1] <= Settings.thres_top):
         terminate = True
+    if (Settings.max_run_time != None) and (runtime/60 >= Settings.max_run_time):
+        terminate = True
     
     return terminate
 
@@ -247,202 +237,107 @@ def callbackF(X, convergence=0.):
     print("{}, {}".format(counts,countf))
     return False
 
-def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind, Settings):
 
+def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtypes, 
+                               ens_ia, ens_concCC, minind, mutind):
     global countf
     global counts
-    global rl_track
+    global tracking
     
     eval_dist = np.empty(Settings.mut_size)
     eval_model = np.empty(Settings.mut_size, dtype='object')
-    eval_rl = np.empty(Settings.mut_size, dtype='object')
+    eval_stoi = np.empty((Settings.mut_size, ns, nr), dtype=int)
+    eval_rtypes = np.empty((Settings.mut_size, 3, nr), dtype=int)
+    eval_ia = np.empty((Settings.mut_size, ns, nr), dtype=int)
     eval_concCC = np.empty(Settings.mut_size, dtype='object')
     
-    mut_model = ens_model[mutind]
     mut_dist = ens_dist[mutind]
-    mut_rl = ens_rl[mutind]
+    mut_model = ens_model[mutind]
+    mut_stoi = ens_stoi[mutind]
+    mut_rtypes = ens_rtypes[mutind]
+    mut_ia = ens_ia[mutind]
     mut_concCC = ens_concCC[mutind]
     
     for m in mut_range:
-        cFalse = (1 + np.sum(np.not_equal(np.sign(realConcCC), 
-                                          np.sign(mut_concCC[m])), axis=0))
-
+        cFalse = (1 + np.sum(np.not_equal(realSigns, np.sign(mut_concCC[m])), axis=0))
         tempdiff = cFalse*np.linalg.norm(realConcCC - mut_concCC[m], axis=0)
-        
         minrndidx = np.random.choice(minind)
         
-        stt = np.zeros((2,2))
-        fid = []
-        bid = []
-        reactionList = rl_track[0]
-        
         o = 0
+        mutate_condition = True
         
-        while ((fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList or
-                reactionList in rl_track or np.sum(stt) != 0 or 
-                len(check_duplicate_reaction(stt)) > 0 or 
-                np.linalg.matrix_rank(stt) != realNumFloating) and (o < Settings.maxIter_mut)):
-            r_idx = np.random.choice(np.arange(nr), p=np.divide(tempdiff, np.sum(tempdiff)))
+        while mutate_condition:
+            sttsum = 1
+            sttrank = 0
+            noprd = True
+            norct = True
+            alreadyexists = True
+            dups = True
+            bn = True
             
-            reactionList = copy.deepcopy(mut_rl[m])
-            
-            if np.random.random() < Settings.recomb:
-                reactionList[r_idx] = ens_rl[minrndidx][r_idx]
-            else:
-                ssum = np.sum(np.sign(realConcCC[:,r_idx]))
-                if ssum > 0:
-                    posRctInd = np.append(realFloatingIdsIndSort[realConcCC[:,r_idx] <= 0], 
-                                          realBoundaryIdsIndSort)
-                    posPrdInd = np.append(realFloatingIdsIndSort[realConcCC[:,r_idx] > 0], 
-                                          realBoundaryIdsIndSort)
-                elif ssum < 0:
-                    posRctInd = np.append(realFloatingIdsIndSort[realConcCC[:,r_idx] < 0], 
-                                          realBoundaryIdsIndSort)
-                    posPrdInd = np.append(realFloatingIdsIndSort[realConcCC[:,r_idx] >= 0], 
-                                          realBoundaryIdsIndSort)
-                else:
-                    posRctInd = np.append(realFloatingIdsIndSort[realConcCC[:,r_idx] <= 0], 
-                                          realBoundaryIdsIndSort)
-                    posPrdInd = np.append(realFloatingIdsIndSort[realConcCC[:,r_idx] >= 0], 
-                                          realBoundaryIdsIndSort)
-                    
-                rct = [col[3] for col in reactionList]
-                prd = [col[4] for col in reactionList]
+            try:
+                r_idx = np.random.choice(nrList, p=np.divide(tempdiff, np.sum(tempdiff)))
                 
-                rType, regType, revType = ng.pickReactionType()
+                stoi = copy.deepcopy(mut_stoi[m])
+                stoi[:,r_idx] = np.zeros(ns)
+                rtypes = copy.deepcopy(mut_rtypes[m])
+                ia = copy.deepcopy(mut_ia[m])
                 
-                # TODO: pick reactants and products based on control coefficients
-                if rType == ng.ReactionType.UNIUNI:
-                    # UniUni
-                    rct_id = np.random.choice(posRctInd, size=1).tolist()
-                    prd_id = np.random.choice(posPrdInd, size=1).tolist()
-                    all_rct = [i for i,x in enumerate(rct) if x==rct_id]
-                    all_prd = [i for i,x in enumerate(prd) if x==prd_id]
-                    
-                    while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
-                           (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or 
-                           (len(set(all_rct) & set(all_prd)) > 0)):
-                        rct_id = np.random.choice(posRctInd, size=1).tolist()
-                        prd_id = np.random.choice(posPrdInd, size=1).tolist()
-                        # Search for potentially identical reactions
-                        all_rct = [i for i,x in enumerate(rct) if x==rct_id]
-                        all_prd = [i for i,x in enumerate(prd) if x==prd_id]
-                elif rType == ng.ReactionType.BIUNI:
-                    # BiUni
-                    rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
-                    prd_id = np.random.choice(posPrdInd, size=1).tolist()
-                    all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
-                    all_prd = [i for i,x in enumerate(prd) if x==prd_id]
-                    
-                    while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
-                           (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or 
-                           (len(set(all_rct) & set(all_prd)) > 0)):
-                        rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
-                        prd_id = np.random.choice(posPrdInd, size=1).tolist()
-                        # Search for potentially identical reactions
-                        all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
-                        all_prd = [i for i,x in enumerate(prd) if x==prd_id]
-                elif rType == ng.ReactionType.UNIBI:
-                    # UniBi
-                    rct_id = np.random.choice(posRctInd, size=1).tolist()
-                    prd_id = np.random.choice(posPrdInd, size=2, replace=True).tolist()
-                    all_rct = [i for i,x in enumerate(rct) if x==rct_id]
-                    all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
-                    
-                    while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
-                           (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or 
-                           (len(set(all_rct) & set(all_prd)) > 0)):
-                        rct_id = np.random.choice(posRctInd, size=1).tolist()
-                        prd_id = np.random.choice(posPrdInd, size=2, replace=True).tolist()
-                        # Search for potentially identical reactions
-                        all_rct = [i for i,x in enumerate(rct) if x==rct_id]
-                        all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
+                if np.random.random() < Settings.recomb:
+                    stoi[:,r_idx] = ens_stoi[minrndidx][:,r_idx]
+                    rtypes[:,r_idx] = ens_rtypes[minrndidx][:,r_idx]
+                    ia[:,r_idx] = ens_ia[minrndidx][:,r_idx]
                 else:
-                    # BiBi
-                    rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
-                    prd_id = np.random.choice(posPrdInd, size=2, replace=True).tolist()
-                    all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
-                    all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
+                    stoi, rTyper, iar  = ng.generateSingleST(stoi, r_idx, realSigns, 
+                                                             realFloatingIdsInd, 
+                                                             realBoundaryIdsInd, 
+                                                             ns, nr)
+                    rtypes[0,r_idx] = rTyper
+                    ia[:,r_idx] = iar
                     
-                    while (((np.any(np.isin(rct_id, realBoundaryIdsInd))) and 
-                           (np.any(np.isin(prd_id, realBoundaryIdsInd)))) or
-                           (len(set(all_rct) & set(all_prd)) > 0)):
-                        rct_id = np.random.choice(posRctInd, size=2, replace=True).tolist()
-                        prd_id = np.random.choice(posPrdInd, size=2, replace=True).tolist()
-                        # Search for potentially identical reactions
-                        all_rct = [i for i,x in enumerate(rct) if set(x)==set(rct_id)]
-                        all_prd = [i for i,x in enumerate(prd) if set(x)==set(prd_id)]
-                        
-                if regType == ng.RegulationType.DEFAULT:
-                    act_id = []
-                    inhib_id = []
-                elif regType == ng.RegulationType.INHIBITION:
-                    act_id = []
-                    delList = np.concatenate([rct_id, prd_id])
-                    if len(realBoundaryIdsInd) > 0:
-                        delList = np.unique(np.append(delList, realBoundaryIdsInd))
-                    cList = np.delete(nsList, delList)
-                    if len(cList) == 0:
-                        inhib_id = []
-                        regType = ng.RegulationType.DEFAULT
-                    else:
-                        inhib_id = np.random.choice(cList, size=1).tolist()
-                elif regType == ng.RegulationType.ACTIVATION:
-                    inhib_id = []
-                    delList = np.concatenate([rct_id, prd_id])
-                    if len(realBoundaryIdsInd) > 0:
-                        delList = np.unique(np.append(delList, realBoundaryIdsInd))
-                    cList = np.delete(nsList, delList)
-                    if len(cList) == 0:
-                        act_id = []
-                        regType = ng.RegulationType.DEFAULT
-                    else:
-                        act_id = np.random.choice(cList, size=1).tolist()
-                else:
-                    delList = np.concatenate([rct_id, prd_id])
-                    if len(realBoundaryIdsInd) > 0:
-                        delList = np.unique(np.append(delList, realBoundaryIdsInd))
-                    cList = np.delete(nsList, delList)
-                    if len(cList) < 2:
-                        act_id = []
-                        inhib_id = []
-                        regType = ng.RegulationType.DEFAULT
-                    else:
-                        reg_id = np.random.choice(cList, size=2, replace=False)
-                        act_id = [reg_id[0]]
-                        inhib_id = [reg_id[1]]
-                    
-                reactionList[r_idx] = [rType, 
-                                       regType, 
-                                       revType, 
-                                       rct_id, 
-                                       prd_id, 
-                                       act_id, 
-                                       inhib_id]
+                stt = stoi[realFloatingIdsInd]
+                stt[stt > 1] = 1
+                stt[stt < -1] = -1
+                
+                sttsum = np.sum(stt)
+                sttrank = np.linalg.matrix_rank(stt)
+                noprd = any(np.sum(stt>0, axis=1) == 0)
+                norct = any(np.sum(stt<0, axis=1) == 0)
+                alreadyexists = stt.tolist() in tracking
+                dups = len(check_duplicate_reaction(st)) > 0
+                bn = (~stt.any(axis=0)).any()
+            except:
+                pass
             
-            st = ng.getFullStoichiometryMatrix(reactionList, ns)
-            stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
-            # stt[0][stt[0]>1] = 1
-            # stt[0][stt[0]<-1] = -1
             o += 1
+                
+            if ((sttsum != 0 or sttrank != realNumFloating or
+                   norct or noprd or alreadyexists or dups or bn) and (o < Settings.maxIter_mut)):
+                mutate_condition = True
+            else:
+                mutate_condition = False
         
         if o >= Settings.maxIter_mut:
             eval_dist[m] = mut_dist[m]
             eval_model[m] = mut_model[m]
-            eval_rl[m] = mut_rl[m]
+            eval_stoi[m] = mut_stoi[m]
+            eval_rtypes[m] = mut_rtypes[m]
+            eval_ia[m] = mut_ia[m]
             eval_concCC[m] = mut_concCC[m]
         else:
-            antStr = ng.generateAntimony(realFloatingIdsSort, realBoundaryIdsSort, 
-                                          fid, bid, reactionList, 
-                                          boundary_init=realBoundaryVal)
+            antStr = ng.generateAntimonyfromST(realFloatingIds, realBoundaryIds, 
+                                               stoi, rtypes, ia, Settings.kineticType,
+                                               boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
-                concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
+                gpid = [x for x in r.getGlobalParameterIds() if not x.startswith('S')]
+                concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
+                # concCC = r.getScaledConcentrationControlCoefficientMatrix()
                 
                 counts = 0
                 countf = 0
                 
-                p_bound = ng.generateParameterBoundary(r.getGlobalParameterIds())
+                p_bound = ng.generateParameterBoundary(gpid)
                 res = scipy.optimize.differential_evolution(f1, args=(r,), 
                             bounds=p_bound, maxiter=Settings.optiMaxIter, 
                             tol=Settings.optiTol, polish=Settings.optiPolish, 
@@ -451,35 +346,48 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
                 if not res.success or res.fun >= 1e6:
                     eval_dist[m] = mut_dist[m]
                     eval_model[m] = mut_model[m]
-                    eval_rl[m] = mut_rl[m]
+                    eval_stoi[m] = mut_stoi[m]
+                    eval_rtypes[m] = mut_rtypes[m]
+                    eval_ia[m] = mut_ia[m]
                     eval_concCC[m] = mut_concCC[m]
                 else:
                     if res.fun < mut_dist[m]:
                         r.resetToOrigin()
-                        r.setValues(r.getGlobalParameterIds(), res.x)
-                        concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
-                        concCC[np.abs(concCC) < 1e-8] = 0
-                        
+                        r.setValues(gpid, res.x)
+                        concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
+                        # concCC = r.getScaledConcentrationControlCoefficientMatrix()
                         if np.isnan(concCC).any():
                             eval_dist[m] = mut_dist[m]
                             eval_model[m] = mut_model[m]
-                            eval_rl[m] = mut_rl[m]
+                            eval_stoi[m] = mut_stoi[m]
+                            eval_rtypes[m] = mut_rtypes[m]
+                            eval_ia[m] = mut_ia[m]
                             eval_concCC[m] = mut_concCC[m]
                         else:
+                            concCC[np.abs(concCC) < 1e-7] = 0
+                            if r.conservedMoietyAnalysis:
+                                concCC = concCC[np.argsort(r.getFloatingSpeciesIds())]
                             eval_dist[m] = res.fun
+                            r.reset()
                             eval_model[m] = r.getAntimony(current=True)
-                            eval_rl[m] = reactionList
-                            rl_track.append(reactionList)
+                            eval_stoi[m] = stoi
+                            tracking.append(stt.tolist())
+                            eval_rtypes[m] = rtypes
+                            eval_ia[m] = ia
                             eval_concCC[m] = concCC
                     else:
                         eval_dist[m] = mut_dist[m]
                         eval_model[m] = mut_model[m]
-                        eval_rl[m] = mut_rl[m]
+                        eval_stoi[m] = mut_stoi[m]
+                        eval_rtypes[m] = mut_rtypes[m]
+                        eval_ia[m] = mut_ia[m]
                         eval_concCC[m] = mut_concCC[m]
             except:
                 eval_dist[m] = mut_dist[m]
                 eval_model[m] = mut_model[m]
-                eval_rl[m] = mut_rl[m]
+                eval_stoi[m] = mut_stoi[m]
+                eval_rtypes[m] = mut_rtypes[m]
+                eval_ia[m] = mut_ia[m]
                 eval_concCC[m] = mut_concCC[m]
         
             try:
@@ -489,14 +397,15 @@ def mutate_and_evaluate(ens_model, ens_dist, ens_rl, ens_concCC, minind, mutind,
             antimony.clearPreviousLoads()
             antimony.freeAll()
 
-    return [eval_dist, eval_model, eval_rl, eval_concCC]
+    return (eval_dist, eval_model, eval_stoi, eval_rtypes, eval_ia, eval_concCC)
 
 
 def initialize(Settings):
-
     global countf
     global counts
-    global rl_track
+    global tracking
+    
+    print("Starting initialization...")
     
     numBadModels = 0
     numGoodModels = 0
@@ -504,37 +413,57 @@ def initialize(Settings):
     
     ens_dist = np.empty(Settings.ens_size)
     ens_model = np.empty(Settings.ens_size, dtype='object')
-    ens_rl = np.empty(Settings.ens_size, dtype='object')
-    rl_track = []
+    ens_stoi = np.empty((Settings.ens_size, ns, nr), dtype=int)
+    ens_rtypes = np.empty((Settings.ens_size, 3, nr), dtype=int)
+    ens_ia = np.empty((Settings.ens_size, ns, nr), dtype=int)
+    tracking = []
     ens_concCC = np.empty(Settings.ens_size, dtype='object')
     
     # Initial Random generation
     while (numGoodModels < Settings.ens_size):
-        rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
-                                     realBoundaryIdsIndSort, realConcCC)
-        st = ng.getFullStoichiometryMatrix(rl, ns)
-        stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
-        # stt[0][stt[0]>1] = 1
-        # stt[0][stt[0]<-1] = -1
+        numGen = 0
         # Ensure no redundant model
-        while (fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList
-               or rl in rl_track or np.sum(stt) != 0 or np.linalg.matrix_rank(stt) != realNumFloating):
-            rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, realBoundaryIdsIndSort, realConcCC)
-            st = ng.getFullStoichiometryMatrix(rl, ns)
-            stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
-            # stt[0][stt[0]>1] = 1
-            # stt[0][stt[0]<-1] = -1
-        antStr = ng.generateAntimony(realFloatingIdsSort, realBoundaryIdsSort, fid,
-                                      bid, rl, boundary_init=realBoundaryVal)
-
+        sttsum = 1
+        sttrank = 0
+        noprd = True
+        norct = True
+        alreadyexists = True
+        dups = True
+        bn = True
+        
+        while (sttsum != 0 or sttrank != realNumFloating or
+               norct or noprd or alreadyexists or dups or bn):
+            try:
+                st, stt, rTypes, ia = ng.generateST(realSigns, realFloatingIdsInd, 
+                                                    realBoundaryIdsInd, ns, nr)
+                sttsum = np.sum(stt)
+                sttrank = np.linalg.matrix_rank(stt)
+                noprd = any(np.sum(stt>0, axis=1) == 0)
+                norct = any(np.sum(stt<0, axis=1) == 0)
+                alreadyexists = stt.tolist() in tracking
+                dups = len(check_duplicate_reaction(st)) > 0
+                bn = (~stt.any(axis=0)).any()
+            
+                numGen += 1
+                if int(numGen/1000) == (numGen/1000):
+                    print("Number of init. model gen. iter. = {}".format(numGen))
+                if numGen > Settings.maxIter_init:
+                    raise Exception("Failed to initialize. Population size may be too large.")
+            except:
+                pass
+        antStr = ng.generateAntimonyfromST(realFloatingIds, realBoundaryIds, 
+                                           st, rTypes, ia, Settings.kineticType,
+                                           boundary_init=realBoundaryVal)
         try:
             r = te.loada(antStr)
-            concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
+            gpid = [x for x in r.getGlobalParameterIds() if not x.startswith('S')]
+            concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
+            # concCC = r.getScaledConcentrationControlCoefficientMatrix()
             
             counts = 0
             countf = 0
             
-            p_bound = ng.generateParameterBoundary(r.getGlobalParameterIds())
+            p_bound = ng.generateParameterBoundary(gpid)
             res = scipy.optimize.differential_evolution(f1, args=(r,), 
                                 bounds=p_bound, maxiter=Settings.optiMaxIter, 
                                 tol=Settings.optiTol, polish=Settings.optiPolish, 
@@ -544,23 +473,29 @@ def initialize(Settings):
                 numBadModels += 1
             else:
                 r.resetToOrigin()
-                r.setValues(r.getGlobalParameterIds(), res.x)
+                r.setValues(gpid, res.x)
                 ens_dist[numGoodModels] = res.fun
                 ens_model[numGoodModels] = r.getAntimony(current=True)
-                ens_rl[numGoodModels] = rl
-                rl_track.append(rl)
-                concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
-                concCC[np.abs(concCC) < 1e-8] = 0
+                ens_stoi[numGoodModels] = st
+                tracking.append(stt.tolist())
+                ens_rtypes[numGoodModels] = rTypes
+                ens_ia[numGoodModels] = ia
+                concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
+                # concCC = r.getScaledConcentrationControlCoefficientMatrix()
+                concCC[np.abs(concCC) < 1e-7] = 0
+                if r.conservedMoietyAnalysis:
+                    concCC = concCC[np.argsort(r.getFloatingSpeciesIds())]
                 ens_concCC[numGoodModels] = concCC
                 
-                numGoodModels = numGoodModels + 1
+                numGoodModels += 1
+                print(numGoodModels)
         except:
-            numBadModels = numBadModels + 1
+            numBadModels += 1
         
         numIter = numIter + 1
-        if int(numIter/1000) == (numIter/1000):
+        if int(numIter/100) == (numIter/100):
             print("Number of iterations = {}".format(numIter))
-        if int(numIter/10000) == (numIter/10000):
+        if int(numIter/100) == (numIter/100):
             print("Number of good models = {}".format(numGoodModels))
     
         try:
@@ -574,64 +509,80 @@ def initialize(Settings):
     print("Number of total iterations = {}".format(numIter))
     print("Number of bad models = {}".format(numBadModels))
     
-    return ens_dist, ens_model, ens_rl, rl_track, ens_concCC
+    return (ens_dist, ens_model, ens_stoi, ens_rtypes, ens_ia, ens_concCC, tracking)
 
 
-def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv, Settings):
+def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtypes, 
+               ens_ia, ens_concCC, mut_ind_inv):
     
     global countf
     global counts
-    global rl_track
+    global tracking
     
     listAntStr = ens_model[mut_ind_inv]
     listDist = ens_dist[mut_ind_inv]
-    listrl = ens_rl[mut_ind_inv]
+    liststoi = ens_stoi[mut_ind_inv]
+    listrtypes = ens_rtypes[mut_ind_inv]
+    listia = ens_ia[mut_ind_inv]
     listconcCC = ens_concCC[mut_ind_inv]
     
     rndSize = len(listDist)
     
     rnd_dist = np.empty(rndSize)
     rnd_model = np.empty(rndSize, dtype='object')
-    rnd_rl = np.empty(rndSize, dtype='object')
+    rnd_stoi = np.empty((rndSize, ns, nr), dtype=int)
+    rnd_rtypes = np.empty((rndSize, 3, nr), dtype=int)
+    rnd_ia = np.empty((rndSize, ns, nr), dtype=int)
     rnd_concCC = np.empty(rndSize, dtype='object')
     
     for l in range(rndSize):
         d = 0
-        rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
-                                     realBoundaryIdsIndSort, realConcCC)
-        st = ng.getFullStoichiometryMatrix(rl, ns)
-        stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
-        # stt[0][stt[0]>1] = 1
-        # stt[0][stt[0]<-1] = -1
         # Ensure no redundant models
-        while ((fid != realFloatingIdsIndSortList or bid != realBoundaryIdsIndSortList or 
-                rl in list(ens_rl) or np.sum(stt) != 0 or 
-                np.linalg.matrix_rank(stt) != realNumFloating) and (d < Settings.maxIter_gen)):
-            rl = ng.generateReactionList(nsList, nrList, realFloatingIdsIndSort, 
-                                         realBoundaryIdsIndSort, realConcCC)
-            st = ng.getFullStoichiometryMatrix(rl, ns)
-            stt, fid, bid = ng.removeBoundaryNodes(st, nsList, nrList)
-            # stt[0][stt[0]>1] = 1
-            # stt[0][stt[0]<-1] = -1
-            
-            d += 1
+        sttsum = 1
+        sttrank = 0
+        noprd = True
+        norct = True
+        alreadyexists = True
+        dups = True
+        bn = True
         
+        while (sttsum != 0 or sttrank != realNumFloating or
+               norct or noprd or alreadyexists or dups or bn) and (d < Settings.maxIter_gen):
+            try:
+                st, stt, rTypes, ia = ng.generateST(realSigns, realFloatingIdsInd, 
+                                                    realBoundaryIdsInd, ns, nr)
+                sttsum = np.sum(stt)
+                sttrank = np.linalg.matrix_rank(stt)
+                noprd = any(np.sum(stt>0, axis=1) == 0)
+                norct = any(np.sum(stt<0, axis=1) == 0)
+                alreadyexists = stt.tolist() in tracking
+                dups = len(check_duplicate_reaction(st)) > 0
+                bn = (~stt.any(axis=0)).any()
+            except:
+                pass
+            d += 1
+            
         if d >= Settings.maxIter_gen:
             rnd_dist[l] = listDist[l]
             rnd_model[l] = listAntStr[l]
-            rnd_rl[l] = listrl[l]
+            rnd_stoi[l] = liststoi[l]
+            rnd_rtypes[l] = listrtypes[l]
+            rnd_ia[l] = listia[l]
             rnd_concCC[l] = listconcCC[l]
         else:
-            antStr = ng.generateAntimony(realFloatingIdsSort, realBoundaryIdsSort, 
-                                         fid, bid, rl, boundary_init=realBoundaryVal)
+            antStr = ng.generateAntimonyfromST(realFloatingIds, realBoundaryIds, 
+                                               st, rTypes, ia, Settings.kineticType,
+                                               boundary_init=realBoundaryVal)
             try:
                 r = te.loada(antStr)
-                concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
+                gpid = [x for x in r.getGlobalParameterIds() if not x.startswith('S')]
+                concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
+                # concCC = r.getScaledConcentrationControlCoefficientMatrix()
                 
                 counts = 0
                 countf = 0
                 
-                p_bound = ng.generateParameterBoundary(r.getGlobalParameterIds())
+                p_bound = ng.generateParameterBoundary(gpid)
                 res = scipy.optimize.differential_evolution(f1, args=(r,), 
                             bounds=p_bound, maxiter=Settings.optiMaxIter, 
                             tol=Settings.optiTol, polish=Settings.optiPolish, 
@@ -641,28 +592,39 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv, Settings):
                 if not res.success or res.fun >= 1e6 or np.isnan(concCC).any():
                     rnd_dist[l] = listDist[l]
                     rnd_model[l] = listAntStr[l]
-                    rnd_rl[l] = listrl[l]
+                    rnd_stoi[l] = liststoi[l]
+                    rnd_rtypes[l] = listrtypes[l]
+                    rnd_ia[l] = listia[l]
                     rnd_concCC[l] = listconcCC[l]
                 else:
                     if res.fun < listDist[l]:
                         r.resetToOrigin()
-                        r.setValues(r.getGlobalParameterIds(), res.x)
+                        r.setValues(gpid, res.x)
                         rnd_dist[l] = res.fun
                         rnd_model[l] = r.getAntimony(current=True)
-                        rnd_rl[l] = rl
-                        rl_track.append(rl)
-                        concCC = customGetScaledConcentrationControlCoefficientMatrix(r)
-                        concCC[np.abs(concCC) < 1e-8] = 0
+                        tracking.append(stt.tolist())
+                        rnd_stoi[l] = st
+                        rnd_rtypes[l] = rTypes
+                        rnd_ia[l] = ia
+                        concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
+                        # concCC = r.getScaledConcentrationControlCoefficientMatrix()
+                        concCC[np.abs(concCC) < 1e-7] = 0
+                        if r.conservedMoietyAnalysis:
+                            concCC = concCC[np.argsort(r.getFloatingSpeciesIds())]
                         rnd_concCC[l] = concCC
                     else:
                         rnd_dist[l] = listDist[l]
                         rnd_model[l] = listAntStr[l]
-                        rnd_rl[l] = listrl[l]
+                        rnd_stoi[l] = liststoi[l]
+                        rnd_rtypes[l] = listrtypes[l]
+                        rnd_ia[l] = listia[l]
                         rnd_concCC[l] = listconcCC[l]
             except:
                 rnd_dist[l] = listDist[l]
                 rnd_model[l] = listAntStr[l]
-                rnd_rl[l] = listrl[l]
+                rnd_stoi[l] = liststoi[l]
+                rnd_rtypes[l] = listrtypes[l]
+                rnd_ia[l] = listia[l]
                 rnd_concCC[l] = listconcCC[l]
         
             try:
@@ -672,7 +634,7 @@ def random_gen(ens_model, ens_dist, ens_rl, ens_concCC, mut_ind_inv, Settings):
             antimony.clearPreviousLoads()
             antimony.freeAll()
             
-    return [rnd_dist, rnd_model, rnd_rl, rnd_concCC]
+    return (rnd_dist, rnd_model, rnd_stoi, rnd_rtypes, rnd_ia, rnd_concCC)
 
 
 def argparse(argv):
@@ -691,30 +653,53 @@ def argparse(argv):
             Settings.READ_SETTINGS = arg
         elif opt in ("-m", "--model"):
             Settings.MODEL_INPUT = arg
+        elif opt in ("-c", "--cache"):
+            Settings.CACHED_DIR = arg
 
 
-# TODO: simulated annealing (multiply to fitness for rate constants)
 if __name__ == '__main__':
 #%% Import Settings
     Settings = SettingsClass()
     argparse(sys.argv[1:])
     
+    if Settings.MODEL_INPUT != None:
+        try:
+            Settings.MODEL_INPUT = os.path.abspath(Settings.MODEL_INPUT)
+        except:
+            raise Exception("Cannot find the given model")
+    
+    if Settings.DATA_INPUT != None:
+        try:
+            Settings.DATA_INPUT = os.path.abspath(Settings.DATA_INPUT)
+        except:
+            raise Exception("Cannot find the given data")
+    
+    if Settings.CACHED_DIR != None:
+        Settings.READ_SETTINGS = os.path.join(Settings.CACHED_DIR, 'settings.txt')
+    
     if Settings.READ_SETTINGS != None:
         ioutils.readSettings(Settings)
+    
+    ioutils.validateSettings(Settings)
     
 #%% Analyze True Model
     roadrunner.Logger.disableLogging()
     # roadrunner.Config.setValue(roadrunner.Config.ROADRUNNER_DISABLE_WARNINGS, 3)
+    np.seterr(divide='ignore')
+    
+    # Restore
+    rr_nmval = roadrunner.Config.getValue(roadrunner.Config.PYTHON_ENABLE_NAMED_MATRIX)
 
     # if conservedMoiety:
     #     roadrunner.Config.setValue(roadrunner.Config.LOADSBMLOPTIONS_CONSERVED_MOIETIES, True)
+    
+    roadrunner.Config.setValue(roadrunner.Config.PYTHON_ENABLE_NAMED_MATRIX, 0)
     
     # roadrunner.Config.setValue(roadrunner.Config.STEADYSTATE_APPROX, True)
     # roadrunner.Config.setValue(roadrunner.Config.STEADYSTATE_APPROX_MAX_STEPS, 5)
     # roadrunner.Config.setValue(roadrunner.Config.STEADYSTATE_APPROX_TIME, 10000)
     # roadrunner.Config.setValue(roadrunner.Config.STEADYSTATE_APPROX_TOL, 1e-3)
     # roadrunner.Config.setValue(roadrunner.Config.ROADRUNNER_DISABLE_PYTHON_DYNAMIC_PROPERTIES, 1)
-    roadrunner.Config.setValue(roadrunner.Config.PYTHON_ENABLE_NAMED_MATRIX, 0)
     # roadrunner.Config.setValue(roadrunner.Config.MAX_OUTPUT_ROWS, 5)
 
     if Settings.MODEL_INPUT != None:
@@ -723,12 +708,12 @@ if __name__ == '__main__':
         try:
             realRR = te.loada(readModel)
             realModel = readModel
-            realRL = ng.generateReactionListFromAntimony(realModel)
+            # realRL = ng.generateReactionListFromAntimony(realModel)
         except:
             try:
                 realRR = te.loads(readModel)
                 realModel = realRR.getAntimony()
-                realRL = ng.generateReactionListFromAntimony(realModel)
+                # realRL = ng.generateReactionListFromAntimony(realModel)
             except:
                 raise Exception("Cannot read the given model")
         
@@ -736,24 +721,7 @@ if __name__ == '__main__':
         # Using one of the test models
         realModel = ioutils.testModels(Settings.modelType)
         realRR = te.loada(realModel)
-        realRL = ng.generateReactionListFromAntimony(realModel)
-    
-    # Species
-    realNumBoundary = realRR.getNumBoundarySpecies()
-    realNumFloating = realRR.getNumFloatingSpecies()
-    realFloatingIds = realRR.getFloatingSpeciesIds()
-    realFloatingIdsSort = np.sort(realFloatingIds)
-    realFloatingIdsInd = np.fromiter(map(int, [s.strip('S') for s in realFloatingIds]), dtype=int)
-    realFloatingIdsIndSort = np.sort(realFloatingIdsInd)
-    realFloatingIdsIndSortList = list(realFloatingIdsIndSort)
-    realBoundaryIds = realRR.getBoundarySpeciesIds()
-    realBoundaryIdsSort = np.sort(realBoundaryIds)
-    realBoundaryIdsInd = np.fromiter(map(int, [s.strip('S') for s in realBoundaryIds]), dtype=int)
-    realBoundaryIdsIndSort = np.sort(realBoundaryIdsInd)
-    realBoundaryIdsIndSortList = list(realBoundaryIdsIndSort)
-    realBoundaryVal = realRR.getBoundarySpeciesConcentrations()
-    realReactionIds = realRR.getReactionIds()
-    realGlobalParameterIds = realRR.getGlobalParameterIds()
+        # realRL = ng.generateReactionListFromAntimony(realModel)
     
     # Control Coefficients and Fluxes
     re = realRR.simulate(0, 10000, 5)
@@ -765,28 +733,57 @@ if __name__ == '__main__':
     realFluxCC = realRR.getScaledFluxControlCoefficientMatrix()
     realConcCC = realRR.getScaledConcentrationControlCoefficientMatrix()
     
-    realFluxCC[np.abs(realFluxCC) < 1e-8] = 0
-    realConcCC[np.abs(realConcCC) < 1e-8] = 0
+    realFluxCC[np.abs(realFluxCC) < 1e-7] = 0
+    realConcCC[np.abs(realConcCC) < 1e-7] = 0
     
-    # Ordering
-    realFluxCC = realFluxCC[np.argsort(realFloatingIds)]
-    realFluxCC = realFluxCC[:,np.argsort(realReactionIds)]
+    if realRR.conservedMoietyAnalysis:
+        realConcCC = realConcCC[np.argsort(realRR.getFloatingSpeciesIds())]
     
-    realConcCC = realConcCC[np.argsort(realFloatingIds)]
-    realConcCC = realConcCC[:,np.argsort(realReactionIds)]
+    realSigns = np.sign(realConcCC).astype(int)
     
-    realFlux = realFlux[np.argsort(realReactionIds)]
+    # Species
+    realNumFloating = realRR.getNumFloatingSpecies()
     
+    realFloatingIds = []
+    realFloatingIdsIndList = []
+    for i in range(realNumFloating):
+        realFloatingIds.append('S{}'.format(i))
+        realFloatingIdsIndList.append(i)
+    fid_dict = dict(zip(realFloatingIds, np.sort(realRR.getFloatingSpeciesIds())))
+    
+    realFloatingIdsInd = np.array(realFloatingIdsIndList)
+    
+    realNumBoundary = realRR.getNumBoundarySpecies()
+    if realNumBoundary == 0:
+        realNumBoundary = 1
+        realBoundaryIds = ['S{}'.format(realNumFloating)]
+        realBoundaryIdsIndList = [realNumFloating]
+        bid_dict = dict(zip(realBoundaryIds, ['sink']))
+        realBoundaryVal = [1]
+    else:
+        realBoundaryIds = []
+        realBoundaryIdsIndList = []
+        for i in range(realNumBoundary):
+            realBoundaryIds.append('S{}'.format(i+realNumFloating))
+            realBoundaryIdsIndList.append(i+realNumFloating)
+        bid_dict = dict(zip(realBoundaryIds, realRR.getBoundarySpeciesIds()))
+        realBoundaryVal = realRR.getBoundarySpeciesConcentrations()
+        
+    realBoundaryIdsInd = np.array(realBoundaryIdsIndList)
+    
+    # Stoichiometry
+    realStoi = realRR.getFullStoichiometryMatrix().astype(int)
+
     # Number of Species and Ranges
     ns = realNumBoundary + realNumFloating # Number of species
     nsList = np.arange(ns)
     nr = realRR.getNumReactions() # Number of reactions
-    nrList = np.argsort(np.sum(realConcCC, axis=0))#np.arange(nr)
+    nrList = np.arange(nr)
     
     ens_range = range(Settings.ens_size)
+    Settings.mut_size = int(Settings.ens_size/2)
     mut_range = range(Settings.mut_size)
     
-    realCount = np.array(np.unravel_index(np.argsort(realFluxCC, axis=None), realFluxCC.shape)).T
         
     #%%
     print("Original Control Coefficients")
@@ -810,11 +807,15 @@ if __name__ == '__main__':
     if Settings.RUN:
         process = psutil.Process()
         
-        # Initualize Lists
-        best_dist = []
-        avg_dist = []
-        med_dist = []
-        top_dist = []
+        # TODO: bundle dist stats in a single 2D array
+        # Initialize fitness statistics
+        if Settings.CACHED_DIR != None:
+            (best_dist, avg_dist, med_dist, top_dist) = ioutils.readStats(Settings)
+        else:
+            best_dist = []
+            avg_dist = []
+            med_dist = []
+            top_dist = []
         
         # Start measuring time...
         t1 = time.time()
@@ -823,14 +824,18 @@ if __name__ == '__main__':
         memory.append(process.memory_info().rss)
         
         # Initialize
-        ens_dist, ens_model, ens_rl, rl_track, ens_concCC = initialize(Settings)
-        
+        if Settings.CACHED_DIR != None:
+            (ens_dist, ens_model, ens_stoi, ens_rtypes, ens_ia, ens_concCC, 
+             tracking) = ioutils.readCache(Settings)
+        else:
+            (ens_dist, ens_model, ens_stoi, ens_rtypes, ens_ia, ens_concCC, 
+             tracking) = initialize(Settings)
+
         memory.append(process.memory_info().rss)
         
         dist_top_ind = np.argsort(ens_dist)
         dist_top = ens_dist[dist_top_ind]
         model_top = ens_model[dist_top_ind]
-        concCC_top = ens_concCC[dist_top_ind]
         
         best_dist.append(dist_top[0])
         avg_dist.append(np.average(dist_top))
@@ -851,35 +856,28 @@ if __name__ == '__main__':
         
         # breakFlag = False
         
-        # TODO: Remove for loop
-        # TODO: Add polishing with fast optimizer 
         while not terminate:
             minind = np.argsort(ens_dist)[:Settings.pass_size]
-            tarind = np.delete(ens_idx, minind)
-            mut_p = 1/ens_dist[tarind]/np.sum(1/ens_dist[tarind])
-            mut_ind = np.random.choice(tarind, 
-                                       size=Settings.mut_size-Settings.pass_size, 
-                                       replace=False, p=mut_p)
-            mut_ind = np.append(mut_ind, minind)
             
-            g1 = np.random.choice(ens_idx, 
-                                  size=int(Settings.ens_size/2), 
+            g1 = np.random.choice(ens_idx, size=int(Settings.ens_size/2), 
                                   replace=False)
             g2 = np.delete(ens_idx, g1)
             
             fitg1 = g1[ens_dist[g1] <= ens_dist[g2]]
             fitg2 = g2[ens_dist[g1] > ens_dist[g2]]
             
-            mut_ind = np.append(fitg1, fitg2)
-            mut_ind_inv = np.setdiff1d(ens_idx, mut_ind)
+            mutind = np.append(fitg1, fitg2)
+            mutind_inv = np.setdiff1d(ens_idx, mutind)
             
-            evol_output = mutate_and_evaluate(ens_model, ens_dist, ens_rl,
-                                              ens_concCC, minind, mut_ind,
-                                              Settings)
-            ens_model[mut_ind] = evol_output[1]
-            ens_dist[mut_ind] = evol_output[0]
-            ens_rl[mut_ind] = evol_output[2]
-            ens_concCC[mut_ind] = evol_output[3]
+            evol_output = mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, 
+                                                     ens_stoi, ens_rtypes, ens_ia, 
+                                                     ens_concCC, minind, mutind)
+            ens_dist[mutind] = evol_output[0]
+            ens_model[mutind] = evol_output[1]
+            ens_stoi[mutind] = evol_output[2]
+            ens_rtypes[mutind] = evol_output[3]
+            ens_ia[mutind] = evol_output[4]
+            ens_concCC[mutind] = evol_output[5]
             
             # for tt in range(len(mut_ind)):
             #     r = te.loada(ens_model[mut_ind[tt]])
@@ -893,13 +891,14 @@ if __name__ == '__main__':
             
             # if breakFlag:
             #     break
-            
-            rnd_output = random_gen(ens_model, ens_dist, ens_rl, ens_concCC,
-                                    mut_ind_inv, Settings)
-            ens_model[mut_ind_inv] = rnd_output[1]
-            ens_dist[mut_ind_inv] = rnd_output[0]
-            ens_rl[mut_ind_inv] = rnd_output[2]
-            ens_concCC[mut_ind_inv] = rnd_output[3]
+            rnd_output = random_gen(Settings, ens_model, ens_dist, ens_stoi, 
+                                    ens_rtypes, ens_ia, ens_concCC, mutind_inv)
+            ens_dist[mutind_inv] = rnd_output[0]
+            ens_model[mutind_inv] = rnd_output[1]
+            ens_stoi[mutind_inv] = rnd_output[2]
+            ens_rtypes[mutind_inv] = rnd_output[3]
+            ens_ia[mutind_inv] = rnd_output[4]
+            ens_concCC[mutind_inv] = rnd_output[5]
             
             dist_top_ind = np.argsort(ens_dist)
             dist_top = ens_dist[dist_top_ind]
@@ -918,7 +917,8 @@ if __name__ == '__main__':
             print("Average distance: {}".format(avg_dist[-1]))
             
             n += 1
-            terminate = updateTC(n, [best_dist, avg_dist, med_dist, top_dist], 
+            runtime = time.time()-t1
+            terminate = updateTC(n, runtime, [best_dist, avg_dist, med_dist, top_dist], 
                                  Settings)
             
             # for tt in range(len(mut_ind_inv)):
@@ -938,55 +938,214 @@ if __name__ == '__main__':
             # if np.average(dist_top) > 10000:
             #     break
     
-        # Check the run time
-        t2 = time.time()
-        print("Run time: {}".format(t2-t1))
+        # Print the run time
+        print("Run time: {}".format(runtime))
         
 #%%
-        # Collect models
+        if Settings.prune:
+            bidx = np.arange(realNumFloating, realNumFloating+realNumBoundary)
+            
+            for i,j in enumerate(ens_model):
+                st = ens_stoi[i]
+                rTypes = ens_rtypes[i]
+                ia = ens_ia[i]
+                for k in range(len(st[0])):
+                    if len(st) < realNumFloating + realNumBoundary:
+                        pass
+                    else:
+                        if np.sum(st[:,k] > 0) > 1:
+                            if np.sum(st[bidx,k] > 0) > 1:
+                                ridx = np.random.choice(np.arange(realNumBoundary)[st[bidx,k] > 0])
+                                st[bidx[st[bidx,k] > 0][ridx],k] = 0
+                                if rTypes[0,k] == 3:
+                                    rTypes[0,k] = 1
+                                elif rTypes[0,k] == 2:
+                                    rTypes[0,k] = 0
+                            else:
+                                if len(st[bidx[st[bidx,k] > 0],k]) > 0:
+                                    st[bidx[st[bidx,k] > 0],k] = 0
+                                    if rTypes[0,k] == 3:
+                                        rTypes[0,k] = 1
+                                    elif rTypes[0,k] == 2:
+                                        rTypes[0,k] = 0
+                            
+                        if np.sum(st[:,k] < 0) > 1:
+                            if np.sum(st[bidx,k] < 0) > 1:
+                                ridx = np.random.choice(np.arange(realNumBoundary)[st[bidx,k] < 0])
+                                st[bidx[st[bidx,k] < 0][ridx],k] = 0
+                                if rTypes[0,k] == 3:
+                                    rTypes[0,k] = 2
+                                elif rTypes[0,k] == 1:
+                                    rTypes[0,k] = 0
+                            else:
+                                if len(st[bidx[st[bidx,k] < 0],k]) > 0:
+                                    st[bidx[st[bidx,k] < 0],k] = 0
+                                    if rTypes[0,k] == 3:
+                                        rTypes[0,k] = 2
+                                    elif rTypes[0,k] == 1:
+                                        rTypes[0,k] = 0
+                    
+                    if np.sum(st[realNumFloating:,k] < -1) > 0:
+                        if rTypes[0,k] == 3:
+                            rTypes[0,k] = 2
+                        elif rTypes[0,k] == 1:
+                            rTypes[0,k] = 0
+                    
+                    if np.sum(st[realNumFloating:,k] > 1) > 0:
+                        if rTypes[0,k] == 3:
+                            rTypes[0,k] = 1
+                        elif rTypes[0,k] == 2:
+                            rTypes[0,k] = 0
+                    
+                antStr = ng.generateAntimonyfromST(realFloatingIds, realBoundaryIds, 
+                                                   st, rTypes, ia, Settings.kineticType,
+                                                   boundary_init=realBoundaryVal)
+                r = te.loada(antStr)
+                gpid = [x for x in r.getGlobalParameterIds() if not x.startswith('S')]
+                p_bound = ng.generateParameterBoundary(gpid)
+                res = scipy.optimize.differential_evolution(f1, args=(r,), 
+                                    bounds=p_bound, maxiter=Settings.optiMaxIter, 
+                                    tol=Settings.optiTol, polish=Settings.optiPolish, 
+                                    seed=Settings.r_seed)
+            
+                r.resetToOrigin()
+                r.setValues(gpid, res.x)
+                concCC = analysis.customGetScaledConcentrationControlCoefficientMatrix(r)
+                # concCC = r.getScaledConcentrationControlCoefficientMatrix()
+                concCC[np.abs(concCC) < 1e-7] = 0
+                if r.conservedMoietyAnalysis:
+                    concCC = concCC[np.argsort(r.getFloatingSpeciesIds())]
+                
+                ens_dist[i] = res.fun
+                r.reset()
+                ens_model[i] = r.getAntimony(current=True)
+                ens_stoi[i] = st
+                ens_rtypes[i] = rTypes
+                ens_ia[i] = ia
+                ens_concCC[i] = concCC
+                
+        if Settings.checkCorrectStoichiometry and Settings.MODEL_INPUT == None:
+            ens_stt = copy.deepcopy(ens_stoi[:,realFloatingIdsInd])
+            ens_stt[ens_stt > 0] = 1
+            ens_stt[ens_stt < 0] = -1
+            if np.any(np.all(realStoi == ens_stt, axis=(1, 2))):
+                print('The algorithm recovered the original model')
+            else:
+                print('The original model is not in the population')
+
+
+        if Settings.refine:
+            print("Refining")
+            for i,j in enumerate(ens_model):
+                try:
+                    r = te.loada(j)
+                    gpid = [x for x in r.getGlobalParameterIds() if not x.startswith('S')]
+                    p_bound = ng.generateParameterBoundary(gpid)
+                    res = scipy.optimize.differential_evolution(f1, args=(r,), 
+                                        bounds=p_bound, maxiter=Settings.optiMaxIter, 
+                                        tol=Settings.refineTol, polish=True, 
+                                        seed=Settings.r_seed)
+                    
+                    if res.success and res.fun < 1e6:
+                        r.resetToOrigin()
+                        r.setValues(gpid, res.x)
+                        ens_dist[i] = res.fun
+                        ens_model[i] = r.getAntimony(current=True)
+                except:
+                    pass
+                try:
+                    r.clearModel()
+                except:
+                    pass        
+                antimony.clearPreviousLoads()
+                antimony.freeAll()
+            
+            best_dist[-1] = dist_top[0]
+            avg_dist[-1] = np.average(dist_top)
+            med_dist[-1] = np.median(dist_top)
+            top_dist[-1] = np.average(np.unique(dist_top)[:top_ind])
         
-        kdeOutput = analysis.selectWithKernalDensity(model_top, dist_top)
+        
+        # Replace correct species names
+        for i,j in enumerate(ens_stoi):
+            r = te.loada(ens_model[i])
+            param = r.getGlobalParameterValues()
+            newAnt = ng.generateAntimonyfromST(list(fid_dict.values()), list(bid_dict.values()),
+                                               j, ens_rtypes[i], ens_ia[i], Settings.kineticType,
+                                               boundary_init=realBoundaryVal)
+            # TODO: remove
+            r = te.loada(newAnt)
+            r.setValues(r.getGlobalParameterIds(), param)
+            ens_model[i] = r.getAntimony(current=True)
+            try:
+                r.clearModel()
+            except:
+                pass        
+            antimony.clearPreviousLoads()
+            antimony.freeAll()
+
+        memory.append(process.memory_info().rss)
+        dist_top_ind = np.argsort(ens_dist)
+        dist_top = ens_dist[dist_top_ind]
+        model_top = ens_model[dist_top_ind]
+
+        # Collect models
+        kdeOutput = analysis.selectWithKernalDensity(dist_top)
         
         if Settings.EXPORT_ALL_MODELS:
             model_col = model_top
             dist_col = dist_top
+            stoi_col = ens_stoi[dist_top_ind]
+            rtypes_col = ens_rtypes[dist_top_ind]
+            ia_col = ens_ia[dist_top_ind]
+            concCC_col = ens_concCC[dist_top_ind]
         else:
-            model_col = model_top[:kdeOutput[0][0]]
-            dist_col = dist_top[:kdeOutput[0][0]]
+            model_col = model_top[:kdeOutput[0]]
+            dist_col = dist_top[:kdeOutput[0]]
+            stoi_col = ens_stoi[dist_top_ind][:kdeOutput[0]]
+            rtypes_col = ens_rtypes[dist_top_ind][:kdeOutput[0]]
+            ia_col = ens_ia[dist_top_ind][:kdeOutput[0]]
+            concCC_col = ens_concCC[dist_top_ind][:kdeOutput[0]]
             
 #%%
-        Settings.EXPORT_PATH = os.path.abspath(os.path.join(os.getcwd(), Settings.EXPORT_PATH))
-        if (Settings.SAVE_PLOT or Settings.EXPORT_SETTINGS or 
-            Settings.EXPORT_OUTPUT or Settings.EXPORT_ALL_MODELS):
+        Settings.EXPORT_PATH = ioutils.exportPathHandler(Settings)
+
+        if Settings.SAVE_PLOT:
             if not os.path.exists(Settings.EXPORT_PATH):
-                os.makedirs(Settings.EXPORT_PATH)
-        
-        if Settings.SHOW_PLOT:
-            if Settings.SAVE_PLOT:
-                if not os.path.exists(Settings.EXPORT_PATH):
-                    os.mkdir(Settings.EXPORT_PATH)
-                if not os.path.exists(os.path.join(Settings.EXPORT_PATH, 'images')):
-                    os.mkdir(os.path.join(Settings.EXPORT_PATH, 'images'))
-                pt.plotAllProgress([best_dist, avg_dist, med_dist, top_dist], 
-                                   labels=['Best', 'Avg', 'Median', 'Top {} percent'.format(int(Settings.top_p*100))],
-                                   SAVE_PATH=os.path.join(Settings.EXPORT_PATH, 'images/AllConvergences.pdf'))
-                pt.plotMemoryUsage(memory, SAVE_PATH=os.path.join(Settings.EXPORT_PATH, 'images/memoryUsage.pdf'))
-                pt.plotDistanceHistogramWithKDE(kdeOutput, dist_top, 
-                                                SAVE_PATH=os.path.join(Settings.EXPORT_PATH, 'images/distance_hist_w_KDE.pdf'))
-            else:
+                os.mkdir(Settings.EXPORT_PATH)
+            if not os.path.exists(os.path.join(Settings.EXPORT_PATH, 'images')):
+                os.mkdir(os.path.join(Settings.EXPORT_PATH, 'images'))
+            pt.plotAllProgress([best_dist, avg_dist, med_dist, top_dist], show=Settings.SHOW_PLOT,
+                               labels=['Best', 'Avg', 'Median', 'Top {} percent'.format(int(Settings.top_p*100))],
+                               SAVE_PATH=os.path.join(Settings.EXPORT_PATH, 'images/AllConvergences.pdf'))
+            pt.plotMemoryUsage(memory, show=Settings.SHOW_PLOT,
+                               SAVE_PATH=os.path.join(Settings.EXPORT_PATH, 'images/memoryUsage.pdf'))
+            pt.plotDistanceHistogramWithKDE(kdeOutput, dist_top, show=Settings.SHOW_PLOT,
+                                            SAVE_PATH=os.path.join(Settings.EXPORT_PATH, 'images/distance_hist_w_KDE.pdf'))
+        else:
+            if Settings.SHOW_PLOT:
                 pt.plotAllProgress([best_dist, avg_dist, med_dist, top_dist], 
                                    labels=['Best', 'Avg', 'Median', 'Top {} percent'.format(int(Settings.top_p*100))])
                 pt.plotMemoryUsage(memory)
                 pt.plotDistanceHistogramWithKDE(kdeOutput, dist_top)
                 
 #%%
-        if Settings.EXPORT_SETTINGS or Settings.EXPORT_OUTPUT:
-            if Settings.EXPORT_SETTINGS:
-                ioutils.exportSettings(Settings, path=Settings.EXPORT_PATH)
-            
-            if Settings.EXPORT_OUTPUT:
-                ioutils.exportOutputs(model_col, dist_col, [best_dist, avg_dist, med_dist, top_dist], 
-                                      Settings, t2-t1, rl_track, n, path=Settings.EXPORT_PATH)
-
+        if Settings.EXPORT_SETTINGS:
+            ioutils.exportSettings(Settings, path=Settings.EXPORT_PATH)
         
-    roadrunner.Config.setValue(roadrunner.Config.PYTHON_ENABLE_NAMED_MATRIX, 1)
+        if Settings.EXPORT_OUTPUT:
+            ioutils.exportOutputs(dist_col, [best_dist, avg_dist, med_dist, top_dist], 
+                                  Settings, tracking, path=Settings.EXPORT_PATH)
+            ioutils.exportModels(model_col, path=Settings.EXPORT_PATH)
+            ioutils.exportReport(model_col, Settings, runtime, tracking, len(top_dist), 
+                                 path=Settings.EXPORT_PATH)
+        
+        if Settings.EXPORT_CACHE:
+            ioutils.exportModelComponents(stoi_col, rtypes_col, ia_col,
+                                          path=Settings.EXPORT_PATH)
+            ioutils.exportControlCoefficients(concCC_col, path=Settings.EXPORT_PATH)
+
+    
+    # Restore config
+    roadrunner.Config.setValue(roadrunner.Config.PYTHON_ENABLE_NAMED_MATRIX, rr_nmval)
+
