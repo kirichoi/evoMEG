@@ -33,28 +33,28 @@ class RP11:
     BiBI  = 0.
 
 class RP12:
-    UniUni = 0.75
+    UniUni = 0.8
     BiUni = 0.
-    UniBi = 0.25
+    UniBi = 0.2
     BiBI  = 0.
     
 class RP21:
-    UniUni = 0.75
-    BiUni = 0.25
+    UniUni = 0.8
+    BiUni = 0.2
     UniBi = 0.
     BiBI  = 0.
     
 class RP212:
     UniUni = 0.
-    BiUni = 0.5
+    BiUni = 0.6
     UniBi = 0.
-    BiBI  = 0.5
+    BiBI  = 0.4
 
 class RP122:
     UniUni = 0.
     BiUni = 0.
-    UniBi = 0.5
-    BiBI  = 0.5
+    UniBi = 0.6
+    BiBI  = 0.4
 
 class RP22:
     UniUni = 0.
