@@ -44,17 +44,17 @@ class SettingsClass:
             
         # 'FFL_m', 'Linear_m', 'Nested_m', 'Branched_m', 'Feedback_m', 'sigPath'
         # 'FFL_r', 'Linear_r', 'Nested_r', 'Branched_r', 'Feedback_r'
-        self.modelType = 'FFL_m'
+        self.modelType = 'Branched_m'
         
         
         # General settings ====================================================
         # Settings for the population and the algorithm
         
         # Size of output ensemble
-        self.ens_size = 50
+        self.ens_size = 200
         # Number of models used for recombination (default: int(0.1*ens_size))
-        self.pass_size = int(self.ens_size/10)
-        # Top percentage of population to track (default: 0.05)
+        self.pass_size = 30#int(self.ens_size/10)
+        # Top percentage of population to track (default: 0.1)
         self.top_p = 0.1
         # Maximum iteration allowed for initialization (default: 10000)
         self.maxIter_init = 10000
@@ -76,7 +76,7 @@ class SettingsClass:
         # Settings to control termination criterion
         
         # Maximum number of generations
-        self.n_gen = 50
+        self.n_gen = 500
         # Number of generations w/o improvement
         self.gen_static = None
         # Threshold average distance
@@ -147,7 +147,7 @@ class SettingsClass:
         # Flag to save model components for caching
         self.EXPORT_CACHE = True
         # Path to save the output
-        self.EXPORT_PATH = './outputs_noise/n0.6'
+        self.EXPORT_PATH = './outputs_V6/Branched_r4'
         # Overwrite the contents if the folder exists
         self.EXPORT_OVERWRITE = False
         # Create folders based on model names
@@ -647,7 +647,7 @@ def argparse(argv):
         
     for opt, arg in opts:
         if opt=="-h" or opt=="--help":
-            print('main.py -s <settingfile> -m <modelfile>')
+            print('main.py -s <settingFile> -m <modelFile> -c <cacheDirectory')
             sys.exit()
         elif opt in ("-s", "--setting"):
             Settings.READ_SETTINGS = arg
@@ -685,7 +685,7 @@ if __name__ == '__main__':
 #%% Analyze True Model
     roadrunner.Logger.disableLogging()
     # roadrunner.Config.setValue(roadrunner.Config.ROADRUNNER_DISABLE_WARNINGS, 3)
-    np.seterr(divide='ignore')
+    np.seterr(divide='ignore', invalid='ignore')
     
     # Restore
     rr_nmval = roadrunner.Config.getValue(roadrunner.Config.PYTHON_ENABLE_NAMED_MATRIX)
@@ -921,6 +921,12 @@ if __name__ == '__main__':
             terminate = updateTC(n, runtime, [best_dist, avg_dist, med_dist, top_dist], 
                                  Settings)
             
+            
+            ens_stt = copy.deepcopy(ens_stoi[:,realFloatingIdsInd])
+            ens_stt[ens_stt > 0] = 1
+            ens_stt[ens_stt < 0] = -1
+            if np.any(np.all(realStoi == ens_stt, axis=(1, 2))):
+                print('The algorithm recovered the original model')
             # for tt in range(len(mut_ind_inv)):
             #     r = te.loada(ens_model[mut_ind_inv[tt]])
             #     try:
