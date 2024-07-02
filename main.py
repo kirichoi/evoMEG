@@ -291,6 +291,7 @@ def mutate_and_evaluate_stoich(Settings, ens_dist, ens_model, ens_stoi, ens_rtyp
                     stoi, rTyper, iar  = ng.generateSingleST(stoi, r_idx, realSigns, 
                                                              realFloatingIdsInd, 
                                                              realBoundaryIdsInd, 
+                                                             rctprob, prdprob, 
                                                              ns, nr)
                     rtypes[0,r_idx] = rTyper
                     ia[:,r_idx] = iar
@@ -435,7 +436,8 @@ def initialize(Settings):
                norct or noprd or alreadyexists or dups or bn):
             try:
                 st, stt, rTypes, ia = ng.generateST(realSigns, realFloatingIdsInd, 
-                                                    realBoundaryIdsInd, ns, nr)
+                                                    realBoundaryIdsInd, 
+                                                    rctprob, prdprob, ns, nr)
                 sttsum = np.sum(stt)
                 sttrank = np.linalg.matrix_rank(stt)
                 noprd = any(np.sum(stt>0, axis=1) == 0)
@@ -550,7 +552,8 @@ def random_gen(Settings, ens_model, ens_dist, ens_stoi, ens_rtypes,
                norct or noprd or alreadyexists or dups or bn) and (d < Settings.maxIter_gen):
             try:
                 st, stt, rTypes, ia = ng.generateST(realSigns, realFloatingIdsInd, 
-                                                    realBoundaryIdsInd, ns, nr)
+                                                    realBoundaryIdsInd, 
+                                                    rctprob, prdprob, ns, nr)
                 sttsum = np.sum(stt)
                 sttrank = np.linalg.matrix_rank(stt)
                 noprd = any(np.sum(stt>0, axis=1) == 0)
@@ -783,6 +786,8 @@ if __name__ == '__main__':
     ens_range = range(Settings.ens_size)
     Settings.mut_size = int(Settings.ens_size/2)
     mut_range = range(Settings.mut_size)
+    
+    rctprob, prdprob = ng.probBuild(realSigns, realFloatingIdsInd, realBoundaryIdsInd, ns, nr)
     
         
     #%%
